@@ -2,11 +2,13 @@ SRCDIR=./src/
 BINDIR=./bin/
 CC=clang
 CXX=clang++
-CFLAGS=-Wall -fPIC
+CFLAGS= -Wall -Wno-overloaded-virtual -Wno-unused-variable -fPIC
 CXXFLAGS=-std=c++2a -Wall -fPIC
 HEADERDIR=./include
-LIBS.dbg=-I./libspatialaudio/build/dbg/include -L./libspatialaudio/build/dbg/lib
-LIBS.opt=-I./libspatialaudio/build/opt/include -L./libspatialaudio/build/opt/lib
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+wd := $(patsubst %/,%,$(dir $(mkfile_path)))
+LIBS.dbg=-I./libspatialaudio/build/dbg/include -L$(wd)/libspatialaudio/build/dbg/lib -Wl,-rpath=$(wd)/libspatialaudio/build/dbg/lib -lspatialaudio
+LIBS.opt=-I./libspatialaudio/build/opt/include -L$(wd)/libspatialaudio/build/opt/lib -Wl,-rpath=$(wd)/libspatialaudio/build/opt/lib -lspatialaudio
 
 DBG_FLAGS=-g
 OPT_FLAGS=-O3
@@ -21,10 +23,10 @@ OPT_SO_NAME=plugin.opt.so
 all: $(DBG_SO_NAME)
 
 $(DBG_SO_NAME): audio_component.cpp $(CFiles) libspatialaudio/build/dbg
-	$(CXX) $(CXXFLAGS) $(DBG_FLAGS) audio_component.cpp $(CFiles) -shared -o $(DBG_SO_NAME) -I$(HEADERDIR) $(LIBS.dbg) -lpthread -pthread -lspatialaudio
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(DBG_FLAGS) audio_component.cpp $(CFiles) -shared -o $(DBG_SO_NAME) -I$(HEADERDIR) $(LIBS.dbg) -lpthread -pthread
 
 $(OPT_SO_NAME): audio_component.cpp $(CFiles) libspatialaudio/build/opt
-	$(CXX) $(CXXFLAGS) $(OPT_FLAGS) audio_component.cpp $(CFiles) -shared -o $(OPT_SO_NAME) -I$(HEADERDIR) $(LIBS.opt) -lpthread -pthread -lspatialaudio
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(OPT_FLAGS) audio_component.cpp $(CFiles) -shared -o $(OPT_SO_NAME) -I$(HEADERDIR) $(LIBS.opt) -lpthread -pthread
 
 
 solo_opt: $(Objects) libspatialaudio/build/opt 
