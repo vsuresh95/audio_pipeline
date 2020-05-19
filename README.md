@@ -69,6 +69,23 @@ The input and output are hardcoded to be 48000 sample rate, 16-bit PCM wav file.
 
 Also if you want to hear the output sound, limit the process sample blocks so that the output is not longer than input! Otherwise, garbage sound samples would be generated.
 
+## ILLIXR integration
+
+`audio_pipeline` subscribes to the most recent pose, does ambisonics encoding, spatial zoom and
+rotation according to the pose, ambisonics decoding and binauralization to output a block of 1024
+sound samples each time at 48000 Hz sample rate. Therefore it has a 21.3ms period to process each
+block. If it misses a deadline, it keeps doing its current work for the next deadline.
+
+Currently this component is for profiling purpose only. It does read a pose from illixr, but the
+pose is not used by spaitial zoom and rotation. Performance-wise, the audio pipeline is input
+invariant.
+
+This component uses the logger to record its runtime.
+
+### Event streams
+
+- Aysnchronously reads `fast_pose`
+
 # License
 
 This code is available under the University of Illinois/NCSA Open Source License. The sound samples provided in ./sample/ are available under the Creative Commons 0 license
