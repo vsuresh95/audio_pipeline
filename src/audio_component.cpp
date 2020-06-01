@@ -18,7 +18,7 @@ using namespace ILLIXR;
 class audio_component : public threadloop
 {
 public:
-	audio_component(phonebook *pb)
+	audio_component(const phonebook *pb)
 		: sb{pb->lookup_impl<switchboard>()},
 		_m_pose{sb->subscribe_latest<pose_type>("slow_pose")}
 	{
@@ -57,7 +57,7 @@ public:
 	}
 
 private:
-	switchboard *sb;
+	const std::shared_ptr<switchboard> sb;
 	start_end_logger* logger;
 	std::unique_ptr<reader_latest<pose_type>> _m_pose;
 	ILLIXR_AUDIO::ABAudio* decoder, *encoder;
