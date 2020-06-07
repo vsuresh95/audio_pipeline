@@ -1,68 +1,51 @@
-
 # Audio Pipeline
 
-Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Reality Benchmark Suite. The audio pipeline is responsible for both recording and playing back spatialized audio for XR.
+Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Reality testbed. The audio pipeline is responsible for both recording and playing back spatialized audio for XR.
 
-# Build
+# Setup Instructions
 
-This version simplifies the build process to automate building of both libspatialaudio and audio pipeline itself. If you have a old version of this module and updating to the new version doesn't build correctly, you may need to purge the old module and clone this new version again.
+Clone this repo using the following command:
 
-Build debug:
+`git clone https://github.com/ILLIXR/audio_pipeline.git --recursive`
 
-```sh
-make
-```
+The audio pipeline relies upon C++17, so clang 5.0+ is required. If you are using a relatively new OS such as Ubuntu 18.04 or later, `sudo apt-get install clang` should suffice. If you're on an older OS, you can install the latest version of clang by following the steps on the [LLVM nightly packages page](https://apt.llvm.org/). If you already have clang 3.8+ and would not like to upgrade, you can replace `-std=c++17` with `-std=c++1z` in the Makefile.
 
-or
+Build debug: `make` or `make solo.dbg`
 
-```sh
-make solo.dbg
-```
+Build release: `make solo.opt`
 
-Build release:
+**If you are switching between builds, please do `make deepclean`.**
 
-```sh
-make solo.opt
-```
-
-**If you are switching between builds, please do `make deepclean`**
-
-Also note that release build (-O3) would show great performance improvement over debug build.
+Also note that the release build (-O3) is considerably faster than the debug build.
 
 # Usage
 
-    ./solo.dbg <number of 1024-sample-block to process> <optional: decode/encode>
+`./solo.dbg <number of 1024-sample-blocks to process> [optional: decode/encode]`
 
-1. Number of blocks to process is a required parameter.
-2. decode/encode specifies the different audio processing procedures to take on, which is specificially designed for profiling. No output would be generated.
+1. Number of audio blocks to process is a required parameter.
+2. decode/encode specifies the different audio processing steps, which are specificially designed for profiling. No output would be generated.
 
-If encode or decode is not specified, the code will do both encode and decode on preset input sound sample files and generate a spatialized output audio at `output.wav`.
+If encode or decode is not specified, the code will perform both encoding and decoding on a preset input sound sample file, and output spatialized audio output in `output.wav`.
 
-## Example:
+## Examples:
 
-    ./solo.dbg 500 
+This will generate ~11 seconds of spatialized audio using the two sound samples under `./sample/`: `./solo.dbg 500`
 
-This will generate a ~10 seconds spatialized audio output from two sound samples under `./sample/`
+This will encode 2000 1024-sample-blocks of audio into HOA format: `./solo.dbg 2000 encode`
 
-    ./solo.dbg 2000 encode
+This will decode (binauralize) 2000 1024-sample-blocks of encoded HOA audio: `./solo.dbg 2000 decode`
 
-This will encode 2000 sample blocks of audio input into ambisonics format.
-
-## Notes
-
-The input and output are hardcoded to be 48000 sample rate, 16-bit PCM wav file.
-
-Also if you want to hear the output sound, limit the process sample blocks so that the output is not longer than input! Otherwise, garbage sound samples would be generated.
+**Note:** The input and output are hardcoded to be 48 KHz sample rate, 16-bit PCM wav files. If you want to hear the output sound, limit the number of processed sample blocks so that the output is not longer than input! Otherwise, garbage sound samples would be generated.
 
 # Components
 
 ## libspatialaudio
 
-Submodule libspatialaudio provides the backend library for Ambisonics encoding, decoding, rotation, zoom, and binauralizer(HRTF included).
+Submodule libspatialaudio provides the backend library for Ambisonics encoding, decoding, rotation, zoom, and binauralization (HRTF included).
 
 ## audio pipeline code
 
-### sound.cpp 
+### sound.cpp
 
 Describes a sound source in the ambisonics sound-field, including the input file for the sound source and its position in the sound-field.
 
@@ -72,4 +55,4 @@ Encapsulate preset processing steps of sound source reading, encoding, rotating,
 
 # License
 
-This code is available under the University of Illinois/NCSA Open Source License. The sound samples provided in ./sample/ are available under the Creative Commons 0 license
+This code is available under the University of Illinois/NCSA Open Source License. The sound samples provided in `./sample/` are available under the Creative Commons 0 license.
