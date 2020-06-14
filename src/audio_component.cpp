@@ -20,7 +20,7 @@ class audio_component : public threadloop
 public:
 	audio_component(const phonebook *pb)
 		: sb{pb->lookup_impl<switchboard>()},
-		_m_pose{sb->get_reader<pose_type>("slow_pose")}
+		_m_pose{sb->subscribe_latest<pose_type>("slow_pose")}
 	{
 		ILLIXR_AUDIO::ABAudio::ProcessType processDecode(ILLIXR_AUDIO::ABAudio::ProcessType::DECODE);	
 		decoder = new ILLIXR_AUDIO::ABAudio("", processDecode);
@@ -59,7 +59,7 @@ public:
 private:
 	const std::shared_ptr<switchboard> sb;
 	start_end_logger* logger;
-	switchboard::reader<pose_type> _m_pose;
+	std::unique_ptr<reader_latest<pose_type>> _m_pose;
 	ILLIXR_AUDIO::ABAudio* decoder, *encoder;
 	std::chrono::time_point<std::chrono::system_clock> sync;
 };
