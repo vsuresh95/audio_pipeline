@@ -4,7 +4,7 @@ CC=clang
 CXX=clang++
 LD=clang++
 CFLAGS=-Wall -fPIC -I./include
-CXXFLAGS=-std=c++17 -Wall -fPIC -I./include
+CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-g -I./libspatialaudio/build/Debug/include
@@ -22,13 +22,13 @@ $(DBG_SO_NAME): CFLAGS += $(DBG_FLAGS)
 $(DBG_SO_NAME): CXXFLAGS += $(DBG_FLAGS)
 $(DBG_SO_NAME): LIBSPATIALAUDIO_BUILD_TYPE=Debug
 $(DBG_SO_NAME): $(OBJFILES) audio_component.o libspatialaudio/build/Debug/lib/libspatialaudio.a
-	$(LD) $(DBG_FLAGS) $^ -shared -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $^ -shared -o $@ $(LD_LIBS)
 
 $(OPT_SO_NAME): CFLAGS += $(OPT_FLAGS)
 $(OPT_SO_NAME): CXXFLAGS += $(OPT_FLAGS)
 $(OPT_SO_NAME): LIBSPATIALAUDIO_BUILD_TYPE=Release
 $(OPT_SO_NAME): $(OBJFILES) audio_component.o libspatialaudio/build/Release/lib/libspatialaudio.a
-	$(LD) $(OPT_FLAGS) $^ -shared -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $^ -shared -o $@ $(LD_LIBS)
 
 solo.dbg: CFLAGS += $(DBG_FLAGS)
 solo.dbg: CXXFLAGS += $(DBG_FLAGS)
