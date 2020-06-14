@@ -42,11 +42,11 @@ public:
 		int num_epoch = ceil(timespent/AUDIO_EPOCH);
 		sync += std::chrono::microseconds(num_epoch*((int)(AUDIO_EPOCH*1000000))); 
 
-		logger->log_start(std::chrono::high_resolution_clock::now());
+		logger.log_start(std::chrono::high_resolution_clock::now());
 		[[maybe_unused]] auto most_recent_pose = _m_pose->get_latest_ro();
-		encoder->processBlock();
-		decoder->processBlock();
-		logger->log_end(std::chrono::high_resolution_clock::now());
+		encoder.processBlock();
+		decoder.processBlock();
+		logger.log_end(std::chrono::high_resolution_clock::now());
 	}
 
 private:
