@@ -21,10 +21,10 @@ public:
 	audio_component(std::string name_, phonebook *pb_)
 		: threadloop{name_, pb_}
 		, sb{pb->lookup_impl<switchboard>()}
+		, logger{"audio"}
 		, _m_pose{sb->subscribe_latest<pose_type>("slow_pose")}
 		, decoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::DECODE}
 		, encoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE}
-		, logger{"audio"}
 		, last_iteration{std::chrono::high_resolution_clock::now()}
 	{
 		decoder.loadSource();
@@ -39,7 +39,7 @@ public:
 		return skip_option::run;
 	}
 
-	virtual void _p_one_iteration() {
+	virtual void _p_one_iteration() override {
 		[[maybe_unused]] auto most_recent_pose = _m_pose->get_latest_ro();
 		encoder.processBlock();
 		decoder.processBlock();
