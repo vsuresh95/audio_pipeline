@@ -25,28 +25,24 @@ public:
 		, decoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::DECODE}
 		, encoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE}
 		, logger{"audio"}
+		, last_iteration{std::chrono::high_resolution_clock::now()}
 	{
 		decoder.loadSource();
-		encoder.loadSource(); 
+		encoder.loadSource();
 	}
 
-	virtual void _p_one_iteration(){
-		std::chrono::time_point<std::chrono::system_clock> blockStart = std::chrono::high_resolution_clock::now();
-		if (blockStart < sync) {
-			std::this_thread::yield(); // ←_←
-			// continue;
-			return;
-		}
-		// seconds in double
-		double timespent = std::chrono::duration<double>(blockStart-sync).count();
-		int num_epoch = ceil(timespent/AUDIO_EPOCH);
-		sync += std::chrono::microseconds(num_epoch*((int)(AUDIO_EPOCH*1000000))); 
+	virtual skip_option _p_should_skip() override {
+		// Could just check time and go back to sleep
+		// But actually blocking here is more efficient, because I wake up fewer times,
+		// reliable_sleep guarantees responsiveness (to `stop()`) and accuracy
+		reliable_sleep(last_iteration += std::chrono::milliseconds{21});
+		return skip_option::run;
+	}
 
-		logger.log_start(std::chrono::high_resolution_clock::now());
+	virtual void _p_one_iteration() {
 		[[maybe_unused]] auto most_recent_pose = _m_pose->get_latest_ro();
 		encoder.processBlock();
 		decoder.processBlock();
-		logger.log_end(std::chrono::high_resolution_clock::now());
 	}
 
 private:
@@ -54,7 +50,8 @@ private:
 	start_end_logger logger;
 	std::unique_ptr<reader_latest<pose_type>> _m_pose;
 	ILLIXR_AUDIO::ABAudio decoder, encoder;
-	std::chrono::time_point<std::chrono::system_clock> sync;
+	std::chrono::time_point<std::chrono::system_clock> previous_time;
+	std::chrono::high_resolution_clock::time_point last_iteration;
 };
 
 PLUGIN_MAIN(audio_component)
