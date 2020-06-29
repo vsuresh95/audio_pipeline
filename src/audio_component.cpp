@@ -51,10 +51,10 @@ public:
 
 private:
 	const std::shared_ptr<switchboard> sb;
-	start_end_logger logger;
 	std::unique_ptr<reader_latest<pose_type>> _m_pose;
 	ILLIXR_AUDIO::ABAudio decoder, encoder;
 	std::chrono::time_point<std::chrono::system_clock> sync;
+	start_end_logger logger;
 };
 
 PLUGIN_MAIN(audio_component)
