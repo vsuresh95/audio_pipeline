@@ -21,7 +21,6 @@ public:
 	audio_component(std::string name_, phonebook *pb_)
 		: threadloop{name_, pb_}
 		, sb{pb->lookup_impl<switchboard>()}
-		, logger{"audio"}
 		, _m_pose{sb->subscribe_latest<pose_type>("slow_pose")}
 		, decoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::DECODE}
 		, encoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE}
@@ -47,10 +46,8 @@ public:
 
 private:
 	const std::shared_ptr<switchboard> sb;
-	start_end_logger logger;
 	std::unique_ptr<reader_latest<pose_type>> _m_pose;
 	ILLIXR_AUDIO::ABAudio decoder, encoder;
-	std::chrono::time_point<std::chrono::system_clock> previous_time;
 	std::chrono::high_resolution_clock::time_point last_iteration;
 };
 
