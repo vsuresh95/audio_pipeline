@@ -64,3 +64,6 @@ clean:
 
 deepclean: clean
 	rm -rf libspatialaudio/build
+
+.PHONY: tests/run
+tests/run:
