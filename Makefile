@@ -18,27 +18,27 @@ OPTOBJFILES=$(patsubst %.c,%.opt.o,$(patsubst %.cpp,%.opt.o,$(SRCFILES)))
 .PHONY: clean deepclean
 
 plugin.dbg.so: $(DBGOBJFILES) audio_component.dbg.o libspatialaudio/build/Debug/lib/libspatialaudio.a $(HPP_FILES)
-	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $(DBGOBJFILES) audio_component.dbg.o libspatialaudio/build/Debug/lib/libspatialaudio.a -shared -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
 plugin.opt.so: $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/Release/lib/libspatialaudio.a $(HPP_FILES)
-	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/Release/lib/libspatialaudio.a -shared -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
-solo.dbg: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a
+solo.dbg.exe: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a
 	$(LD) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
 
-solo.opt: $(OBJFILES) main.o libspatialaudio/build/Release/lib/libspatialaudio.a
+solo.opt.exe: $(OBJFILES) main.o libspatialaudio/build/Release/lib/libspatialaudio.a
 	$(LD) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
 
-%.opt.o: src/%.cpp libspatialaudio/build/Release/lib/libspatialaudio.a
+%.opt.o: src/%.cpp
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
 
-%.opt.o: src/%.c libspatialaudio/build/Release/lib/libspatialaudio.a
+%.opt.o: src/%.c
 	$(CC) $(OPT_FLAGS) $(CFLAGS) $< -c -o $@
 
-%.dbg.o: src/%.cpp libspatialaudio/build/Debug/lib/libspatialaudio.a
+%.dbg.o: src/%.cpp
 	$(CXX) $(DBG_FLAGS) $(CXXFLAGS) $< -c -o $@
 
-%.dbg.o: src/%.c libspatialaudio/build/Debug/lib/libspatialaudio.a
+%.dbg.o: src/%.c
 	$(CC) $(DBG_FLAGS) $(CFLAGS) $< -c -o $@
 
 libspatialaudio/build/Debug/lib/libspatialaudio.a:
@@ -56,7 +56,7 @@ libspatialaudio/build/Release/lib/libspatialaudio.a:
 	$(MAKE) -C libspatialaudio/build install
 
 clean:
-	rm -rf audio *.o *.so solo.dbg solo.opt build/
+	rm -rf audio *.o *.so *.exe
 
 deepclean: clean
 	rm -rf libspatialaudio/build
