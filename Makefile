@@ -9,7 +9,8 @@ LD_LIBS=-lpthread -pthread
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -I./libspatialaudio/build/Debug/include -g
 OPT_FLAGS=-O3 -I./libspatialaudio/build/Release/include -DNDEBUG
-HPP_FILES ?= $(shell find -L . -name '*.hpp')
+HPP_FILES := $(shell find -L . -name '*.hpp')
+HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 
 SRCFILES=audio.cpp sound.cpp
 DBGOBJFILES=$(patsubst %.c,%.dbg.o,$(patsubst %.cpp,%.dbg.o,$(SRCFILES)))
