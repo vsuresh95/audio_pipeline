@@ -30,16 +30,16 @@ solo.dbg.exe: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio
 solo.opt.exe: $(OBJFILES) main.o libspatialaudio/build/Release/lib/libspatialaudio.a
 	$(LD) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
 
-%.opt.o: src/%.cpp
+%.opt.o: src/%.cpp libspatialaudio/build/Release/lib/libspatialaudio.a
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
 
-%.opt.o: src/%.c
+%.opt.o: src/%.c libspatialaudio/build/Release/lib/libspatialaudio.a
 	$(CC) $(OPT_FLAGS) $(CFLAGS) $< -c -o $@
 
-%.dbg.o: src/%.cpp
+%.dbg.o: src/%.cpp libspatialaudio/build/Debug/lib/libspatialaudio.a
 	$(CXX) $(DBG_FLAGS) $(CXXFLAGS) $< -c -o $@
 
-%.dbg.o: src/%.c
+%.dbg.o: src/%.c libspatialaudio/build/Debug/lib/libspatialaudio.a
 	$(CC) $(DBG_FLAGS) $(CFLAGS) $< -c -o $@
 
 libspatialaudio/build/Debug/lib/libspatialaudio.a:
