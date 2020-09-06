@@ -61,3 +61,6 @@ clean:
 
 deepclean: clean
 	rm -rf libspatialaudio/build
+
+tests/run:
+tests/:
