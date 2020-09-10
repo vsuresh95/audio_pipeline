@@ -1,8 +1,8 @@
 SRCDIR=./src/
 BINDIR=./bin/
 CC=clang
-CXX=clang++
-LD=clang++
+CXX=clang++-10
+LD=clang++-10
 CFLAGS=-Wall -fPIC -I./include
 CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
