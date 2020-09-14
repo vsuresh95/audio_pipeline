@@ -34,7 +34,8 @@ public:
 		// Could just check time and go back to sleep
 		// But actually blocking here is more efficient, because I wake up fewer times,
 		// reliable_sleep guarantees responsiveness (to `stop()`) and accuracy
-		reliable_sleep(last_iteration += std::chrono::milliseconds{21});
+		last_iteration += std::chrono::milliseconds{21};
+		std::this_thread::sleep_for(last_iteration - std::chrono::high_resolution_clock::now());
 		return skip_option::run;
 	}
 
