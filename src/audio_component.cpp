@@ -36,6 +36,7 @@ public:
 		// reliable_sleep guarantees responsiveness (to `stop()`) and accuracy
 		last_iteration += std::chrono::milliseconds{21};
 		std::this_thread::sleep_for(last_iteration - std::chrono::high_resolution_clock::now());
+		
 		return skip_option::run;
 	}
 
