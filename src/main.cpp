@@ -8,11 +8,9 @@ int main(int argc, char const *argv[])
     using namespace ILLIXR_AUDIO;
 
     if (argc < 2) {
-        #ifndef NDEBUG
-            std::cout << "Usage: " << argv[0] << " <number of size 1024 blocks to process> ";
-            std::cout << "<optional: encode/decode>\n";
-            std::cout << "Note: If you want to hear the output sound, limit the process sample blocks so that the output is not longer than input!\n";
-        #endif
+		std::cout << "Usage: " << argv[0] << " <number of size 1024 blocks to process> ";
+		std::cout << "<optional: encode/decode>\n";
+		std::cout << "Note: If you want to hear the output sound, limit the process sample blocks so that the output is not longer than input!\n";
         return 1;
     }
 
