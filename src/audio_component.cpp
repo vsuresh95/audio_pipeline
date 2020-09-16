@@ -15,19 +15,18 @@ using namespace ILLIXR;
 
 #define AUDIO_EPOCH (1024.0/48000.0)
 
-class audio_component : public threadloop
+class audio_xcoding : public threadloop
 {
 public:
-	audio_component(std::string name_, phonebook *pb_)
-		: threadloop{name_, pb_}
+	audio_xcoding(phonebook *pb_, bool encoding)
+		: threadloop{encoding ? "audio_encoding" : "audio_decoding", pb_}
 		, sb{pb->lookup_impl<switchboard>()}
 		, _m_pose{sb->subscribe_latest<pose_type>("slow_pose")}
-		, decoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::DECODE}
-		, encoder{"", ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE}
+		, xcoder{"", encoding ? ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE : ILLIXR_AUDIO::ABAudio::ProcessType::DECODE}
 		, last_iteration{std::chrono::high_resolution_clock::now()}
+		, encoding_{encoding}
 	{
-		decoder.loadSource();
-		encoder.loadSource();
+		xcoder.loadSource();
 	}
 
 	virtual skip_option _p_should_skip() override {
@@ -37,16 +36,43 @@ public:
 	}
 
 	virtual void _p_one_iteration() override {
-		[[maybe_unused]] auto most_recent_pose = _m_pose->get_latest_ro();
-		encoder.processBlock();
-		decoder.processBlock();
+		if (!encoding_) {
+			[[maybe_unused]] auto most_recent_pose = _m_pose->get_latest_ro();
+		}
+		xcoder.processBlock();
 	}
 
 private:
 	const std::shared_ptr<switchboard> sb;
 	std::unique_ptr<reader_latest<pose_type>> _m_pose;
-	ILLIXR_AUDIO::ABAudio decoder, encoder;
+	ILLIXR_AUDIO::ABAudio xcoder;
 	std::chrono::high_resolution_clock::time_point last_iteration;
+	bool encoding_;
 };
 
-PLUGIN_MAIN(audio_component)
+class audio_pipeline : public plugin {
+public:
+	audio_pipeline(std::string name_, phonebook *pb_)
+		: plugin{name_, pb_}
+		, audio_encoding{pb_, true }
+		, audio_decoding{pb_, false}
+	{ }
+
+	virtual void start() override {
+		audio_encoding.start();
+		audio_decoding.start();
+		plugin::start();
+	}
+
+    virtual void stop() override {
+		audio_encoding.stop();
+		audio_decoding.stop();
+        plugin::stop();
+    }
+
+private:
+	audio_xcoding audio_encoding;
+	audio_xcoding audio_decoding;
+};
+
+PLUGIN_MAIN(audio_pipeline)
