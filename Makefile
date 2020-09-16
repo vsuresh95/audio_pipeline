@@ -1,6 +1,6 @@
 SRCDIR=./src/
 BINDIR=./bin/
-CC=clang
+CC=clang-10
 CXX=clang++-10
 LD=clang++-10
 CFLAGS=-Wall -fPIC -I./include
