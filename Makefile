@@ -8,7 +8,7 @@ CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -I./libspatialaudio/build/Debug/include -g
-OPT_FLAGS=-O3 -I./libspatialaudio/build/Release/include -DNDEBUG
+OPT_FLAGS=-O3 -I./libspatialaudio/build/RelWithDebInfo/include -DNDEBUG
 HPP_FILES := $(shell find -L . -name '*.hpp')
 HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 
@@ -21,19 +21,19 @@ OPTOBJFILES=$(patsubst %.c,%.opt.o,$(patsubst %.cpp,%.opt.o,$(SRCFILES)))
 plugin.dbg.so: $(DBGOBJFILES) audio_component.dbg.o libspatialaudio/build/Debug/lib/libspatialaudio.a $(HPP_FILES)
 	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
-plugin.opt.so: $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/Release/lib/libspatialaudio.a $(HPP_FILES)
+plugin.opt.so: $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a $(HPP_FILES)
 	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
 solo.dbg.exe: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a
 	$(LD) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
 
-solo.opt.exe: $(OBJFILES) main.o libspatialaudio/build/Release/lib/libspatialaudio.a
+solo.opt.exe: $(OBJFILES) main.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(LD) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
 
-%.opt.o: src/%.cpp libspatialaudio/build/Release/lib/libspatialaudio.a
+%.opt.o: src/%.cpp libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
 
-%.opt.o: src/%.c libspatialaudio/build/Release/lib/libspatialaudio.a
+%.opt.o: src/%.c libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(CC) $(OPT_FLAGS) $(CFLAGS) $< -c -o $@
 
 %.dbg.o: src/%.cpp libspatialaudio/build/Debug/lib/libspatialaudio.a
@@ -49,10 +49,10 @@ libspatialaudio/build/Debug/lib/libspatialaudio.a:
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
-libspatialaudio/build/Release/lib/libspatialaudio.a:
-	mkdir -p libspatialaudio/build/Release
+libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
+	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=Release -DCMAKE_BUILD_TYPE=Release ..
+	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
