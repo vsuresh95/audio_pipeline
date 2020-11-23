@@ -4,6 +4,7 @@
 #include <sound.h>
 #include <vector>
 #include <string>
+#include <pthread.h>
 
 namespace ILLIXR_AUDIO{
 	class ABAudio{
@@ -21,6 +22,15 @@ namespace ILLIXR_AUDIO{
 		void processBlock();
 		// Load sound source files (predefined)
 		void loadSource();
+
+		// Buffer of most recent processed block for fast copying to audio buffer
+		short mostRecentBlockL[BLOCK_SIZE];
+		short mostRecentBlockR[BLOCK_SIZE];
+		bool buffer_ready;
+
+		// Number of blocks left to process before this stream is complete
+		unsigned long num_blocks_left;
+
 	private:
 		ProcessType processType;
 		// a list of sound sources in this audio

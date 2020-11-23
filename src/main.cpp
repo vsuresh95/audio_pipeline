@@ -1,5 +1,7 @@
 #include <audio.h>
 #include <iostream>
+#include <realtime.h>
+#include <pthread.h>
 
 int main(int argc, char const *argv[])
 {
@@ -23,8 +25,19 @@ int main(int argc, char const *argv[])
     
     ABAudio audio("output.wav", procType);
     audio.loadSource();
-    for (int i = 0; i < numBlocks; ++i){
-        audio.processBlock();
+    audio.num_blocks_left = numBlocks;
+
+    // Launch realtime audio thread for audio processing
+    if (procType == ABAudio::ProcessType::FULL) {
+        pthread_t rt_audio_thread;
+        pthread_create(&rt_audio_thread, NULL, illixr_rt_init, (void *)&audio);
+        pthread_join(rt_audio_thread, NULL);
     }
+    else {
+        for (int i = 0; i < numBlocks; ++i) {
+            audio.processBlock();
+        }
+    }
+
     return 0;
 }

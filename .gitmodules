@@ -1,3 +1,6 @@
 [submodule "libspatialaudio"]
 	path = libspatialaudio
 	url = https://github.com/ILLIXR/libspatialaudio.git
+[submodule "portaudio"]
+	path = portaudio
+	url = https://github.com/PortAudio/portaudio.git

@@ -21,6 +21,9 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     // Processor to zoom
     zoomer = new CAmbisonicZoomer();
     zoomer->Configure(NORDER, true, 0);
+
+    buffer_ready = false;
+    num_blocks_left = 0;
 }
 
 ILLIXR_AUDIO::ABAudio::~ABAudio(){
@@ -86,6 +89,8 @@ void ILLIXR_AUDIO::ABAudio::processBlock(){
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL){
         writeFile(resultSample);
+
+        if (num_blocks_left > 0) num_blocks_left--;
     }
 
     delete[] resultSample[0];
@@ -107,60 +112,64 @@ void ILLIXR_AUDIO::ABAudio::readNEncode(CBFormat& sumBF){
 
 // Simple rotation
 void ILLIXR_AUDIO::ABAudio::updateRotation(){
-	static int frame = 0;
-	frame++;
-	Orientation head(0,0,1.0*frame/1500*3.14*2);
-	rotator->SetOrientation(head);
-	rotator->Refresh();
+    static int frame = 0;
+    frame++;
+    Orientation head(0,0,1.0*frame/1500*3.14*2);
+    rotator->SetOrientation(head);
+    rotator->Refresh();
 }
 // Simple zoom
 void ILLIXR_AUDIO::ABAudio::updateZoom(){
-	static int frame = 0;
-	frame++;
-	zoomer->SetZoom(sinf(frame/100));
-	zoomer->Refresh();
+    static int frame = 0;
+    frame++;
+    zoomer->SetZoom(sinf(frame/100));
+    zoomer->Refresh();
 }
 // Process some rotation and zoom effects
 void ILLIXR_AUDIO::ABAudio::rotateNZoom(CBFormat& sumBF){
-	updateRotation();
-	rotator->Process(&sumBF, BLOCK_SIZE);
-	updateZoom();
-	zoomer->Process(&sumBF, BLOCK_SIZE);
+    updateRotation();
+    rotator->Process(&sumBF, BLOCK_SIZE);
+    updateZoom();
+    zoomer->Process(&sumBF, BLOCK_SIZE);
 }
 
 void ILLIXR_AUDIO::ABAudio::writeFile(float** resultSample){
-	// Normalize(Clipping), then write into file
-	for(int sampleIdx = 0; sampleIdx < BLOCK_SIZE; ++sampleIdx){
-		resultSample[0][sampleIdx] = std::max(std::min(resultSample[0][sampleIdx], +1.0f), -1.0f);
-		resultSample[1][sampleIdx] = std::max(std::min(resultSample[1][sampleIdx], +1.0f), -1.0f);
-		int16_t tempSample0 = (int16_t)(resultSample[0][sampleIdx]/1.0 * 32767);
-		int16_t tempSample1 = (int16_t)(resultSample[1][sampleIdx]/1.0 * 32767);
-		outputFile->write((char*)&tempSample0,sizeof(short));
-		outputFile->write((char*)&tempSample1,sizeof(short));
-	}
+    // Normalize(Clipping), then write into file
+    for(int sampleIdx = 0; sampleIdx < BLOCK_SIZE; ++sampleIdx){
+        resultSample[0][sampleIdx] = std::max(std::min(resultSample[0][sampleIdx], +1.0f), -1.0f);
+        resultSample[1][sampleIdx] = std::max(std::min(resultSample[1][sampleIdx], +1.0f), -1.0f);
+        int16_t tempSample0 = (int16_t)(resultSample[0][sampleIdx]/1.0 * 32767);
+        int16_t tempSample1 = (int16_t)(resultSample[1][sampleIdx]/1.0 * 32767);
+        outputFile->write((char*)&tempSample0,sizeof(short));
+        outputFile->write((char*)&tempSample1,sizeof(short));
+
+        // Cache written block in object buffer until needed by realtime audio thread
+        mostRecentBlockL[sampleIdx] = tempSample0;
+        mostRecentBlockR[sampleIdx] = tempSample1;
+    }
 }
 
 namespace ILLIXR_AUDIO{
     // NOTE: WAV FILE SIZE is not correct
     typedef struct __attribute__ ((packed)) WAVHeader_t
     {
-    	unsigned int sGroupID = 0x46464952;
-    	unsigned int dwFileLength = 48000000;		// A large enough random number
-    	unsigned int sRiffType = 0x45564157;
-    	unsigned int subchunkID = 0x20746d66;
-    	unsigned int subchunksize = 16;
-    	unsigned short audioFormat = 1;
-    	unsigned short NumChannels = 2;
-    	unsigned int SampleRate = 48000;
-    	unsigned int byteRate = 48000*2*2;
-    	unsigned short BlockAlign = 2*2;
-    	unsigned short BitsPerSample = 16;
-    	unsigned int dataChunkID = 0x61746164;	
-    	unsigned int dataChunkSize = 48000000;		// A large enough random number
+        unsigned int sGroupID = 0x46464952;
+        unsigned int dwFileLength = 48000000;       // A large enough random number
+        unsigned int sRiffType = 0x45564157;
+        unsigned int subchunkID = 0x20746d66;
+        unsigned int subchunksize = 16;
+        unsigned short audioFormat = 1;
+        unsigned short NumChannels = 2;
+        unsigned int SampleRate = 48000;
+        unsigned int byteRate = 48000*2*2;
+        unsigned short BlockAlign = 2*2;
+        unsigned short BitsPerSample = 16;
+        unsigned int dataChunkID = 0x61746164;  
+        unsigned int dataChunkSize = 48000000;      // A large enough random number
     } WAVHeader;
 }
 void ILLIXR_AUDIO::ABAudio::generateWAVHeader(){
-	// brute force wav header
-	WAVHeader wavh;
-	outputFile->write((char*)&wavh, sizeof(WAVHeader));
+    // brute force wav header
+    WAVHeader wavh;
+    outputFile->write((char*)&wavh, sizeof(WAVHeader));
 }

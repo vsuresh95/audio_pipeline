@@ -5,12 +5,12 @@ CXX=clang++
 LD=clang++
 CFLAGS=-Wall -fPIC -I./include
 CXXFLAGS=-std=c++17 -Wall -fPIC -I./include
-LD_LIBS=-lpthread -pthread
-LD_LIBS=-lpthread -pthread
-DBG_FLAGS=-g -I./libspatialaudio/build/Debug/include
-OPT_FLAGS=-O3 -g -I./libspatialaudio/build/RelWithDebInfo/include
+LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
+LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
+DBG_FLAGS=-g -I./libspatialaudio/build/Debug/include -I./portaudio/include
+OPT_FLAGS=-O0 -g -I./libspatialaudio/build/RelWithDebInfo/include -I./portaudio/include
 
-SRCFILES=audio.cpp sound.cpp
+SRCFILES=audio.cpp sound.cpp realtime.cpp
 OBJFILES=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SRCFILES)))
 
 .PHONY: clean deepclean
@@ -18,13 +18,13 @@ OBJFILES=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SRCFILES)))
 solo.dbg: CFLAGS += $(DBG_FLAGS)
 solo.dbg: CXXFLAGS += $(DBG_FLAGS)
 solo.dbg: LIBSPATIALAUDIO_BUILD_TYPE=Debug
-solo.dbg: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a
+solo.dbg: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
 	$(LD) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
 
 solo.opt: CFLAGS += $(OPT_FLAGS)
 solo.opt: CXXFLAGS += $(OPT_FLAGS)
 solo.opt: LIBSPATIALAUDIO_BUILD_TYPE=RelWithDebInfo
-solo.opt: $(OBJFILES) main.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
+solo.opt: $(OBJFILES) main.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
 	$(LD) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
 
 %.o: src/%.cpp libspatialaudio/build
@@ -36,6 +36,8 @@ solo.opt: $(OBJFILES) main.o libspatialaudio/build/RelWithDebInfo/lib/libspatial
 libspatialaudio/build/Debug/lib/libspatialaudio.a: libspatialaudio/build
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: libspatialaudio/build
 
+portaudio/lib/.libs/libportaudio.so: libportaudio/build
+
 libspatialaudio/build:
 	mkdir -p libspatialaudio/build/$(LIBSPATIALAUDIO_BUILD_TYPE)
 	cd libspatialaudio/build; \
@@ -43,6 +45,9 @@ libspatialaudio/build:
 	      -DCMAKE_BUILD_TYPE=$(LIBSPATIALAUDIO_BUILD_TYPE) ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
+
+libportaudio/build:
+	cd portaudio &&	./configure && make
 
 clean:
 	rm -rf audio *.o *.so solo.dbg solo.opt
