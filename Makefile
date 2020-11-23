@@ -8,7 +8,7 @@ CXXFLAGS=-std=c++17 -Wall -fPIC -I./include
 LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
 LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
 DBG_FLAGS=-g -I./libspatialaudio/build/Debug/include -I./portaudio/include
-OPT_FLAGS=-O0 -g -I./libspatialaudio/build/RelWithDebInfo/include -I./portaudio/include
+OPT_FLAGS=-O3 -g -I./libspatialaudio/build/RelWithDebInfo/include -I./portaudio/include
 
 SRCFILES=audio.cpp sound.cpp realtime.cpp
 OBJFILES=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SRCFILES)))
@@ -54,3 +54,4 @@ clean:
 
 deepclean: clean
 	rm -rf libspatialaudio/build
+	cd portaudio && make clean
