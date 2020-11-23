@@ -65,6 +65,7 @@ clean:
 
 deepclean: clean
 	rm -rf libspatialaudio/build
+	cd portaudio && make clean
 
 .PHONY: tests/run
 tests/run:
