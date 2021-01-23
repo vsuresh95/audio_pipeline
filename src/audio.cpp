@@ -25,15 +25,15 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
 
 ILLIXR_AUDIO::ABAudio::~ABAudio(){
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL){
-        free(outputFile);
+        delete outputFile;
     }
     for (unsigned int soundIdx = 0; soundIdx < soundSrcs->size(); ++soundIdx){
-        free((*soundSrcs)[soundIdx]);
+        delete (*soundSrcs)[soundIdx];
     }
-    free(soundSrcs);
-    free(decoder);
-    free(rotator);
-    free(zoomer);
+    delete soundSrcs;
+    delete decoder;
+    delete rotator;
+    delete zoomer;
 }
 
 void ILLIXR_AUDIO::ABAudio::loadSource(){
