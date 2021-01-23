@@ -28,7 +28,7 @@ ILLIXR_AUDIO::ABAudio::~ABAudio(){
         delete outputFile;
     }
     for (unsigned int soundIdx = 0; soundIdx < soundSrcs->size(); ++soundIdx){
-        delete soundSrcs->operator[](soundIdx);
+        delete (*soundSrcs)[soundIdx];
     }
     delete soundSrcs;
     delete decoder;
