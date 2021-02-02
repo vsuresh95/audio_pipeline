@@ -6,7 +6,7 @@
 #include <fstream>
 
 #define SAMPLERATE 48000
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 512
 #define NORDER 3
 #define NUM_CHANNELS (OrderToComponents(NORDER, true))
 #define NUM_SRCS 16
@@ -23,7 +23,7 @@ namespace ILLIXR_AUDIO{
 		// set sound amplitude scale
 		void setSrcAmp(float ampScale);
 		// read sound samples from mono 16bit WAV file and encode into ambisonics format
-		CBFormat* readInBFormat();		
+		CBFormat* readInBFormat();
 	private:
 		// corresponding sound src file
 		std::fstream* srcFile;

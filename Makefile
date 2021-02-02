@@ -23,11 +23,11 @@ plugin.dbg.so: $(DBGOBJFILES) audio_component.dbg.o libspatialaudio/build/Debug/
 plugin.opt.so: $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a $(HPP_FILES) portaudio/lib/.libs/libportaudio.so
 	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
-solo.dbg.exe: $(OBJFILES) main.o libspatialaudio/build/Debug/lib/libspatialaudio.a
-	$(LD) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
+solo.dbg.exe: $(HPP_FILES) $(DBGOBJFILES) main.dbg.o libspatialaudio/build/Debug/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
+	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
 
-solo.opt.exe: $(OBJFILES) main.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
-	$(LD) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
+solo.opt.exe: $(HPP_FILES) $(OPTOBJFILES) main.opt.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
+	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
 
 %.opt.o: src/%.cpp libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
@@ -50,8 +50,8 @@ libspatialaudio/build/Debug/lib/libspatialaudio.a:
 
 portaudio/lib/.libs/libportaudio.so: libportaudio/build
 
-libspatialaudio/build:
-	mkdir -p libspatialaudio/build/$(LIBSPATIALAUDIO_BUILD_TYPE)
+libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
+	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
 	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 	$(MAKE) -C libspatialaudio/build
