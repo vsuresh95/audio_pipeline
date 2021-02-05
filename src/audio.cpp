@@ -1,4 +1,5 @@
 #include <audio.h>
+#include <iostream>
 
 ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeIn){
     processType = procTypeIn;
@@ -10,11 +11,13 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     soundSrcs = new std::vector<Sound*>;
     // binauralizer as ambisonics decoder
     decoder = new CAmbisonicBinauralizer();
+
     unsigned temp;
     bool ok = decoder->Configure(NORDER, true, SAMPLERATE, BLOCK_SIZE, temp);
     if (!ok){
         printf("Binauralizer Configuration failed!\n");
     }
+
     // Processor to rotate
     rotator = new CAmbisonicProcessor();
     rotator->Configure(NORDER, true, BLOCK_SIZE, 0);
@@ -59,7 +62,12 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
         soundSrcs->push_back(inSound);
     }else{
         for (unsigned i = 0; i < NUM_SRCS; i++) {
+
+            // This line is setting errno=2, for a temp fix were setting it to 0 directly after
+            // The path here is broken, we need to specify a relative path like we do in kimera
             inSound = new Sound("samples/lectureSample.wav", NORDER, true);
+            errno = 0;
+
             position.fAzimuth = -0.1 * i;
             position.fElevation = 3.14/2 * i;
             position.fDistance = 1 * i;
