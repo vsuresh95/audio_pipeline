@@ -2,21 +2,21 @@
 #include <algorithm>
 
 
-ILLIXR_AUDIO::Sound::Sound(std::string srcFilename, unsigned nOrder, bool b3D){
+ILLIXR_AUDIO::Sound::Sound(std::string srcFilename, unsigned nOrder, bool b3D) {
     amp = 1.0;
     srcFile = new std::fstream(srcFilename, std::fstream::in);
 
-    // NOTE: This is currently only accepts mono channel 16-bit depth WAV file
-    // TODO: Change brutal read from wav file
+    /// NOTE: This is currently only accepts mono channel 16-bit depth WAV file
+    /// TODO: Change brutal read from wav file
     char temp[44];
     srcFile->read((char*)temp, 44);
 
-    // BFormat file initialization
+    /// BFormat file initialization
     BFormat = new CBFormat();
     bool ok = BFormat->Configure(nOrder, true, BLOCK_SIZE);
     BFormat->Refresh();
 
-    // Encoder initialization
+    /// Encoder initialization
     BEncoder = new CAmbisonicEncoderDist();
     ok &= BEncoder->Configure(nOrder, true, SAMPLERATE);
     BEncoder->Refresh();
@@ -25,9 +25,14 @@ ILLIXR_AUDIO::Sound::Sound(std::string srcFilename, unsigned nOrder, bool b3D){
     srcPos.fDistance = 0;
     BEncoder->SetPosition(srcPos);
     BEncoder->Refresh();
+
+    /// Clear errno, as this constructor is setting the flag (with value 2)
+    /// A temporary fix.
+    errno = 0;
 }
 
-void ILLIXR_AUDIO::Sound::setSrcPos(PolarPoint& pos){
+
+void ILLIXR_AUDIO::Sound::setSrcPos(PolarPoint& pos) {
     srcPos.fAzimuth = pos.fAzimuth;
     srcPos.fElevation = pos.fElevation;
     srcPos.fDistance = pos.fDistance;
@@ -35,23 +40,28 @@ void ILLIXR_AUDIO::Sound::setSrcPos(PolarPoint& pos){
     BEncoder->Refresh();
 }
 
-void ILLIXR_AUDIO::Sound::setSrcAmp(float ampScale){
+
+void ILLIXR_AUDIO::Sound::setSrcAmp(float ampScale) {
     amp = ampScale;
 }
 
-//TODO: Change brutal read from wav file
-CBFormat* ILLIXR_AUDIO::Sound::readInBFormat(){
+
+/// TODO: Change brutal read from wav file
+CBFormat* ILLIXR_AUDIO::Sound::readInBFormat() {
     short sampleTemp[BLOCK_SIZE];
     srcFile->read((char*)sampleTemp, BLOCK_SIZE * sizeof(short));
-    // normalize samples to -1 to 1 float, with amplitude scale
-    for (int i = 0; i < BLOCK_SIZE; ++i){
+
+    /// Normalize samples to -1 to 1 float, with amplitude scale
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
         sample[i] = amp * (sampleTemp[i] / 32767.0);
     }
+
     BEncoder->Process(sample, BLOCK_SIZE, BFormat);
     return BFormat;
 }
 
-ILLIXR_AUDIO::Sound::~Sound(){
+
+ILLIXR_AUDIO::Sound::~Sound() {
     srcFile->close();
     delete srcFile;
     delete BFormat;
