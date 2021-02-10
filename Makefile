@@ -24,10 +24,10 @@ plugin.opt.so: $(OPTOBJFILES) audio_component.opt.o libspatialaudio/build/RelWit
 	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) -shared -o $@ $(LD_LIBS)
 
 solo.dbg.exe: $(HPP_FILES) $(DBGOBJFILES) main.dbg.o libspatialaudio/build/Debug/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
-	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $^ -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(DBG_FLAGS) $(filter-out $(HPP_FILES),$^) $(LD_LIBS) -o $@ 
 
 solo.opt.exe: $(HPP_FILES) $(OPTOBJFILES) main.opt.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a portaudio/lib/.libs/libportaudio.so
-	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $^ -o $@ $(LD_LIBS)
+	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) $(LD_LIBS) -o $@ 
 
 %.opt.o: src/%.cpp libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
