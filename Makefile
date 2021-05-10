@@ -48,7 +48,8 @@ libspatialaudio/build/Debug/lib/libspatialaudio.a:
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
-portaudio/lib/.libs/libportaudio.so: libportaudio/build
+portaudio/lib/.libs/libportaudio.so:
+	cd portaudio &&	./configure && make
 
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
 	mkdir -p libspatialaudio/build/RelWithDebInfo
@@ -56,9 +57,6 @@ libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
 	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
-
-libportaudio/build:
-	cd portaudio &&	./configure && make
 
 clean:
 	rm -rf audio *.o *.so *.exe
