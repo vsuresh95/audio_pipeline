@@ -1,10 +1,12 @@
+use_integ=$(ILLIXR_INTEGRATION)
+
 SRCDIR=./src/
 BINDIR=./bin/
 CC=clang-10
 CXX=clang++-10
 LD=clang++-10
-CFLAGS=-Wall -fPIC -I./include
-CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual
+CFLAGS=-Wall -fPIC -I./include -DILLIXR_INTEGRATION=$(use_integ)
+CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual -DILLIXR_INTEGRATION=$(use_integ)
 LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
 OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include
@@ -14,6 +16,7 @@ HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 SRCFILES=audio.cpp sound.cpp realtime.cpp
 DBGOBJFILES=$(patsubst %.c,%.dbg.o,$(patsubst %.cpp,%.dbg.o,$(SRCFILES)))
 OPTOBJFILES=$(patsubst %.c,%.opt.o,$(patsubst %.cpp,%.opt.o,$(SRCFILES)))
+
 
 .PHONY: clean deepclean
 
@@ -44,7 +47,7 @@ solo.opt.exe: $(HPP_FILES) $(OPTOBJFILES) main.opt.o libspatialaudio/build/RelWi
 libspatialaudio/build/Debug/lib/libspatialaudio.a:
 	mkdir -p libspatialaudio/build/Debug
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=Debug -DCMAKE_BUILD_TYPE=Debug ..
+	cmake -DCMAKE_INSTALL_PREFIX=Debug -DCMAKE_BUILD_TYPE=Debug -DILLIXR_INTEGRATION=$(use_integ) ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
@@ -54,7 +57,7 @@ portaudio/lib/.libs/libportaudio.so:
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
 	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo -DILLIXR_INTEGRATION=$(use_integ) ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
