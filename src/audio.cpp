@@ -7,6 +7,18 @@
 #include "../common/error_util.hpp"
 #endif /// ILLIXR_INTEGRATION
 
+std::string get_path() {
+#ifdef ILLIXR_INTEGRATION
+    const char* AUDIO_ROOT_c_str = std::getenv("AUDIO_ROOT");
+    if (!AUDIO_ROOT_c_str) {
+        ILLIXR::abort("Please define AUDIO_ROOT");
+    }
+    std::string AUDIO_ROOT = std::string{AUDIO_ROOT_c_str};
+    return AUDIO_ROOT + "samples/";
+#else
+    return "samples/";
+#endif /// ILLIXR_INTEGRATION
+}
 
 ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeIn)
     : processType {procTypeIn}
@@ -51,15 +63,16 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
 #endif /// NDEBUG
 
     /// Add a bunch of sound sources
+    const std::string samples_folder{get_path()};
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
-        soundSrcs.emplace_back("samples/lectureSample.wav", NORDER, true);
+        soundSrcs.emplace_back(samples_folder + "lectureSample.wav", NORDER, true);
         soundSrcs.back().setSrcPos({
             .fAzimuth   = -0.1f,
             .fElevation = 3.14f/2,
             .fDistance  = 1
         });
 
-        soundSrcs.emplace_back("samples/radioMusicSample.wav", NORDER, true);
+        soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
         soundSrcs.back().setSrcPos({
             .fAzimuth   = 1.0f,
             .fElevation = 0.0f,
@@ -73,7 +86,7 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
             /// it has not been set
             /// The path here is broken, we need to specify a relative path like we do in kimera
             assert(errno == 0);
-            soundSrcs.emplace_back("samples/lectureSample.wav", NORDER, true);
+            soundSrcs.emplace_back(samples_folder + "lectureSample.wav", NORDER, true);
             assert(errno == 0);
 
             soundSrcs.back().setSrcPos({
