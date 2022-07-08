@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include "sound.h"
+#include <iostream>
 
 #ifdef ILLIXR_INTEGRATION
 #include "../common/error_util.hpp"

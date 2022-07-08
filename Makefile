@@ -1,12 +1,17 @@
-use_integ=$(ILLIXR_INTEGRATION)
+# use_integ=$(ILLIXR_INTEGRATION)
 
 SRCDIR=./src/
 BINDIR=./bin/
-CC=clang-10
-CXX=clang++-10
-LD=clang++-10
-CFLAGS=-Wall -fPIC -I./include -DILLIXR_INTEGRATION=$(use_integ)
-CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual -DILLIXR_INTEGRATION=$(use_integ)
+# CC=clang-10
+CC=clang
+# CXX=clang++-10
+# LD=clang++-10
+CXX=clang++
+LD=clang++
+# CFLAGS=-Wall -fPIC -I./include -DILLIXR_INTEGRATION=$(use_integ)
+CFLAGS=-Wall -fPIC -I./include
+# CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual -DILLIXR_INTEGRATION=$(use_integ)
+CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread portaudio/lib/.libs/libportaudio.so
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
 OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include
@@ -44,20 +49,34 @@ solo.opt.exe: $(HPP_FILES) $(OPTOBJFILES) main.opt.o libspatialaudio/build/RelWi
 %.dbg.o: src/%.c libspatialaudio/build/Debug/lib/libspatialaudio.a
 	$(CC) $(DBG_FLAGS) $(CFLAGS) $< -c -o $@
 
+# libspatialaudio/build/Debug/lib/libspatialaudio.a:
+# 	mkdir -p libspatialaudio/build/Debug
+# 	cd libspatialaudio/build; \
+# 	cmake -DCMAKE_INSTALL_PREFIX=Debug -DCMAKE_BUILD_TYPE=Debug -DILLIXR_INTEGRATION=$(use_integ) ..
+# 	$(MAKE) -C libspatialaudio/build
+# 	$(MAKE) -C libspatialaudio/build install
+
 libspatialaudio/build/Debug/lib/libspatialaudio.a:
 	mkdir -p libspatialaudio/build/Debug
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=Debug -DCMAKE_BUILD_TYPE=Debug -DILLIXR_INTEGRATION=$(use_integ) ..
+	cmake -DCMAKE_INSTALL_PREFIX=Debug -DCMAKE_BUILD_TYPE=Debug ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
 portaudio/lib/.libs/libportaudio.so:
 	cd portaudio &&	./configure && make
 
+# libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
+# 	mkdir -p libspatialaudio/build/RelWithDebInfo
+# 	cd libspatialaudio/build; \
+# 	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo -DILLIXR_INTEGRATION=$(use_integ) ..
+# 	$(MAKE) -C libspatialaudio/build
+# 	$(MAKE) -C libspatialaudio/build install
+
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
 	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo -DILLIXR_INTEGRATION=$(use_integ) ..
+	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
 
