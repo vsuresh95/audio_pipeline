@@ -3,6 +3,11 @@
 #include <cstdlib>
 #include "audio.h"
 
+extern double t_rotatezoom;
+extern double t_decode;
+extern double t_rotate;
+extern double t_zoom;
+
 #ifdef ILLIXR_INTEGRATION
 #include "../common/error_util.hpp"
 #endif /// ILLIXR_INTEGRATION
@@ -108,14 +113,28 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     CBFormat sumBF;
     sumBF.Configure(NORDER, true, BLOCK_SIZE);
 
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::DECODE) {
         readNEncode(sumBF);
     }
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE) {
         /// Processing garbage data if just decoding
+        
+        t_start = clock();
         rotateNZoom(sumBF);
+        t_end = clock();
+        t_diff = double(t_end - t_start);
+        t_rotatezoom += t_diff;
+
+        t_start = clock();
         decoder.Process(&sumBF, resultSample);
+        t_end = clock();
+        t_diff = double(t_end - t_start);
+        t_decode += t_diff;
     }
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
@@ -179,10 +198,23 @@ void ILLIXR_AUDIO::ABAudio::updateZoom() {
 
 /// Process some rotation and zoom effects
 void ILLIXR_AUDIO::ABAudio::rotateNZoom(CBFormat& sumBF) {
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+
     updateRotation();
+    t_start = clock();
     rotator.Process(&sumBF, BLOCK_SIZE);
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_rotate += t_diff;
+
     updateZoom();
+    t_start = clock();
     zoomer.Process(&sumBF, BLOCK_SIZE);
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_zoom += t_diff;
 }
 
 
