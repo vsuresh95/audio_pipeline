@@ -94,7 +94,7 @@ libspatialaudio/build/Debug/lib/libspatialaudio.a:
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: esp-libs
 	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
-	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo \
 	      -DCMAKE_AR=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ar \
 	      -DCMAKE_RANLIB=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ranlib \
 		  -DBUILD_SHARED_LIBS=OFF ..
@@ -104,7 +104,7 @@ libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: esp-libs
 clean:
 	rm -rf audio *.o *.so *.exe
 
-deepclean: clean
+deepclean: clean esp-build-distclean
 	rm -rf libspatialaudio/build
 
 .PHONY: tests/run

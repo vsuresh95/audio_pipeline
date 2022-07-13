@@ -48,7 +48,13 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     {
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
-            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], FX_IL);;
+            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], FX_IL);
+
+            // std::cout << "Channel " << niChannel;
+            // std::cout << " Sample " << niSample;
+            // std::cout << " Input " << pBFSrcDst->m_ppfChannels[niChannel][niSample];
+            // std::cout << " Output " << buf[niChannel*nSamples + niSample];
+            // std::cout << std::endl;
         }
     }
 
@@ -69,6 +75,12 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
             pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], FX_IL);
+
+            // std::cout << "Channel " << niChannel;
+            // std::cout << " Sample " << niChannel;
+            // std::cout << " Input " << buf[out_offset + niChannel*nSamples + niSample];
+            // std::cout << " Output " << pBFSrcDst->m_ppfChannels[niChannel][niSample];
+            // std::cout << std::endl;
         }
     }
 

@@ -123,7 +123,17 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE) {
         /// Processing garbage data if just decoding
-        
+        // for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++)
+        // {
+        //     for(unsigned niChannel = 0; niChannel < NUM_SRCS; niChannel++)
+        //     {
+        //         std::cout << "Sample " << niSample;
+        //         std::cout << " Channel " << niChannel;
+        //         std::cout << " Input " << sumBF.m_ppfChannels[niChannel][niSample];
+        //         std::cout << std::endl;
+        //     }
+        // } 
+
         t_start = clock();
         rotateNZoom(sumBF);
         t_end = clock();

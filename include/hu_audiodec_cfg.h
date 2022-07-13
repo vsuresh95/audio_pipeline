@@ -9,10 +9,6 @@ extern "C" {
 #include <esp.h>
 #include <esp_accelerator.h>
 
-#ifdef __cplusplus
-}
-#endif
-
 #ifdef __KERNEL__
 #include <linux/ioctl.h>
 #include <linux/types.h>
@@ -151,5 +147,9 @@ esp_thread_info_t cfg_000[] = {
 		.esp_desc = &(hu_audiodec_cfg_000[0].esp),
 	}
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HU_AUDIODEC_CFG_H__ */
