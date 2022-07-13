@@ -3,6 +3,8 @@
 #include <realtime.h>
 #include <pthread.h>
 
+#include "hu_audiodec_cfg.h"
+
 double t_rotatezoom;
 double t_decode;
 double t_rotate;
@@ -22,6 +24,56 @@ double t_decode_filter;
 double t_decode_ifft;
 
 double t_total_time;
+
+extern unsigned m_nChannelCount_copy;
+
+#define FX_IL 16
+
+void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
+{
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+    
+    t_start = clock();
+    size_t size = sizeof(token_t) * m_nChannelCount_copy * nSamples * 2;
+    token_t *buf = (token_t *) esp_alloc(size);
+	hu_audiodec_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+    cfg_000[0].hw_buf = buf;
+
+    unsigned out_offset = m_nChannelCount_copy * nSamples;
+
+    // Copying buffer from pBFSrcDst to buf
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount_copy; niChannel++)
+    {
+        for(unsigned niSample = 0; niSample < nSamples; niSample++)
+        {
+            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], FX_IL);;
+        }
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_rotate_acc_mgmt += t_diff;
+
+    // Running the accelerator
+    t_start = clock();
+    esp_run(cfg_000, 1);
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_rotate_acc += t_diff;
+
+    // Copying buffer from pBFSrcDst to buf
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount_copy; niChannel++)
+    {
+        for(unsigned niSample = 0; niSample < nSamples; niSample++)
+        {
+            pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], FX_IL);
+        }
+    }
+
+    esp_free(buf);
+}
 
 int main(int argc, char const *argv[])
 {

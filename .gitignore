@@ -2,5 +2,8 @@
 *.o
 *.so
 audio
+solo.dbg.exe
+solo.opt.exe
 solo.dbg
 solo.opt
+esp-build
