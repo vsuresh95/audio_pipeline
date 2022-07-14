@@ -2,12 +2,15 @@
 
 SRCDIR=./src/
 BINDIR=./bin/
-# CC=clang-10
-CC=riscv64-unknown-linux-gnu-gcc
-# CXX=clang++-10
-# LD=clang++-10
-CXX=riscv64-unknown-linux-gnu-g++
-LD=riscv64-unknown-linux-gnu-g++
+ifdef NATIVE_COMPILE
+	CC=clang
+	CXX=clang++
+	LD=clang++
+else
+	CC=riscv64-unknown-linux-gnu-gcc
+	CXX=riscv64-unknown-linux-gnu-g++
+	LD=riscv64-unknown-linux-gnu-g++
+endif
 # CFLAGS=-Wall -fPIC -I./include -DILLIXR_INTEGRATION=$(use_integ)
 CFLAGS=-Wall -fPIC -I./include
 # CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual -DILLIXR_INTEGRATION=$(use_integ)
@@ -15,6 +18,9 @@ CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloade
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
 OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include -I./libspatialaudio/source/kiss_fft
+ifdef NATIVE_COMPILE
+	OPT_FLAGS+=-DNATIVE_COMPILE
+endif
 HPP_FILES := $(shell find -L . -name '*.hpp')
 HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 
@@ -22,6 +28,7 @@ SRCFILES=audio.cpp sound.cpp
 DBGOBJFILES=$(patsubst %.c,%.dbg.o,$(patsubst %.cpp,%.dbg.o,$(SRCFILES)))
 OPTOBJFILES=$(patsubst %.c,%.opt.o,$(patsubst %.cpp,%.opt.o,$(SRCFILES)))
 
+ifndef NATIVE_COMPILE
 CROSS_COMPILE ?= riscv64-unknown-linux-gnu-
 
 ESP_BUILD_DRIVERS = ${PWD}/esp-build/drivers
@@ -43,6 +50,7 @@ ESP_LD_FLAGS += -lcontig
 
 OPT_FLAGS += $(ESP_INCDIR) $(ESP_LD_LIBS)
 LD_LIBS += $(ESP_LD_FLAGS)
+endif
 
 .PHONY: clean deepclean
 
@@ -91,6 +99,7 @@ libspatialaudio/build/Debug/lib/libspatialaudio.a:
 # 	$(MAKE) -C libspatialaudio/build
 # 	$(MAKE) -C libspatialaudio/build install
 
+ifndef NATIVE_COMPILE
 libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: esp-libs
 	mkdir -p libspatialaudio/build/RelWithDebInfo
 	cd libspatialaudio/build; \
@@ -100,6 +109,15 @@ libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: esp-libs
 		  -DBUILD_SHARED_LIBS=OFF ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
+else
+libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a:
+	mkdir -p libspatialaudio/build/RelWithDebInfo
+	cd libspatialaudio/build; \
+	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo \
+		  -DBUILD_SHARED_LIBS=OFF ..
+	$(MAKE) -C libspatialaudio/build
+	$(MAKE) -C libspatialaudio/build install
+endif
 
 clean:
 	rm -rf audio *.o *.so *.exe
@@ -110,6 +128,7 @@ deepclean: clean esp-build-distclean
 .PHONY: tests/run
 tests/run:
 
+ifndef NATIVE_COMPILE
 esp-build:
 	@mkdir -p $(ESP_BUILD_DRIVERS)/contig_alloc
 	@mkdir -p $(ESP_BUILD_DRIVERS)/esp
@@ -134,3 +153,4 @@ esp-libs: esp-build
 	cd $(ESP_BUILD_DRIVERS)/test; CROSS_COMPILE=$(CROSS_COMPILE) BUILD_PATH=$$PWD $(MAKE) -C $(ESP_DRV_LINUX)/test
 	cd $(ESP_BUILD_DRIVERS)/libesp; CROSS_COMPILE=$(CROSS_COMPILE) BUILD_PATH=$$PWD $(MAKE) -C $(ESP_DRV_LINUX)/libesp
 	cd $(ESP_BUILD_DRIVERS)/utils; CROSS_COMPILE=$(CROSS_COMPILE) BUILD_PATH=$$PWD $(MAKE) -C $(ESP_DRV_LINUX)/utils
+endif

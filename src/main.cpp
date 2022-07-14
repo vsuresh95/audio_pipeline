@@ -3,8 +3,10 @@
 #include <realtime.h>
 #include <pthread.h>
 
+#ifndef NATIVE_COMPILE
 #include "hu_audiodec_cfg.h"
 #include "fft2_cfg.h"
+#endif
 
 double t_rotatezoom;
 double t_decode;
@@ -36,6 +38,7 @@ bool do_rotate_acc_offload;
 
 void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 {
+#ifndef NATIVE_COMPILE
     clock_t t_start;
     clock_t t_end;
     double t_diff;
@@ -95,10 +98,12 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_rotate_acc_mgmt += t_diff;
+#endif
 }
 
 void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout)
 {
+#ifndef NATIVE_COMPILE
     clock_t t_start;
     clock_t t_end;
     double t_diff;
@@ -157,6 +162,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fft2_acc_mgmt += t_diff;
+#endif
 }
 
 #ifdef __cplusplus
@@ -195,7 +201,7 @@ int main(int argc, char const *argv[])
     t_total_time = 0;
 
     do_fft2_acc_offload = 0;
-    do_rotate_acc_offload = true;
+    do_rotate_acc_offload = false;
 
     if (argc < 2) {
 		std::cout << "Usage: " << argv[0] << " <number of size 1024 blocks to process> ";
