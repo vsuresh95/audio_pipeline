@@ -6,7 +6,7 @@
 #include <spatialaudio/Ambisonics.h>
 
 constexpr std::size_t SAMPLERATE {48000U};
-constexpr std::size_t BLOCK_SIZE {512U};
+constexpr std::size_t BLOCK_SIZE {1024U};
 constexpr std::size_t NORDER     {3U};
 constexpr std::size_t NUM_SRCS   {16U};
 

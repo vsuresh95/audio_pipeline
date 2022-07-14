@@ -20,17 +20,17 @@ extern "C" {
 #endif
 #endif /* __KERNEL__ */
 
-// #include "hu_audiodec_rtl.h"
+typedef int32_t rotate_token_t;
 
-typedef int32_t token_t;
+#define ROTATE_FX_IL 16
 
 /* <<--params-->> */
-#define CFG_REGS_0  0   // 0: dummy
-#define CFG_REGS_1  0   // 1: dummy, channel is fixed a 16
-#define CFG_REGS_2  8   // audio block size
-#define CFG_REGS_3  0   // dma_read_index  
-#define CFG_REGS_4  64  // dma_write_index 128*32b/64b = 64 
-#define CFG_REGS_5  0   // 5-07: dummy
+#define CFG_REGS_0  0   	// 0: dummy
+#define CFG_REGS_1  0  		// 1: dummy, channel is fixed a 16
+#define CFG_REGS_2  1024	// audio block size
+#define CFG_REGS_3  0   	// dma_read_index  
+#define CFG_REGS_4  8192	// dma_write_index 16*1024*32b/64b = 8192 
+#define CFG_REGS_5  0   	// 5-07: dummy
 #define CFG_REGS_6  0
 #define CFG_REGS_7  0   
 #define CFG_REGS_8  39413   // 08: cfg_cos_alpha;  
@@ -139,10 +139,12 @@ struct hu_audiodec_rtl_access hu_audiodec_cfg_000[] = {
 	}
 };
 
-esp_thread_info_t cfg_000[] = {
+char hu_audiodec_dev_name[] = "hu_audiodec_rtl.0";
+
+esp_thread_info_t hu_audiodec_thread_000[] = {
 	{
 		.run = true,
-		.devname = "hu_audiodec_rtl.0",
+		.devname = hu_audiodec_dev_name,
 		.ioctl_req = HU_AUDIODEC_RTL_IOC_ACCESS,
 		.esp_desc = &(hu_audiodec_cfg_000[0].esp),
 	}

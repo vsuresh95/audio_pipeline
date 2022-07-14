@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 #include "hu_audiodec_cfg.h"
+#include "fft2_cfg.h"
 
 double t_rotatezoom;
 double t_decode;
@@ -12,6 +13,9 @@ double t_zoom;
 
 double t_rotate_acc_mgmt;
 double t_rotate_acc;
+double t_fft2_acc_mgmt;
+double t_fft2_acc;
+
 double t_rotate1;
 double t_rotate2;
 double t_rotate3;
@@ -27,7 +31,8 @@ double t_total_time;
 
 extern unsigned m_nChannelCount_copy;
 
-#define FX_IL 16
+unsigned do_fft2_acc_offload;
+bool do_rotate_acc_offload;
 
 void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 {
@@ -36,10 +41,10 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     double t_diff;
     
     t_start = clock();
-    size_t size = sizeof(token_t) * m_nChannelCount_copy * nSamples * 2;
-    token_t *buf = (token_t *) esp_alloc(size);
+    size_t size = sizeof(rotate_token_t) * m_nChannelCount_copy * nSamples * 2;
+    rotate_token_t *buf = (rotate_token_t *) esp_alloc(size);
 	hu_audiodec_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-    cfg_000[0].hw_buf = buf;
+    hu_audiodec_thread_000[0].hw_buf = buf;
 
     unsigned out_offset = m_nChannelCount_copy * nSamples;
 
@@ -48,7 +53,7 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     {
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
-            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], FX_IL);
+            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
 
             // std::cout << "Channel " << niChannel;
             // std::cout << " Sample " << niSample;
@@ -64,17 +69,18 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 
     // Running the accelerator
     t_start = clock();
-    esp_run(cfg_000, 1);
+    esp_run(hu_audiodec_thread_000, 1);
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_rotate_acc += t_diff;
 
-    // Copying buffer from pBFSrcDst to buf
+    t_start = clock();
+    // Copying buffer from buf to pBFSrcDst
     for(unsigned niChannel = 0; niChannel < m_nChannelCount_copy; niChannel++)
     {
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
-            pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], FX_IL);
+            pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], ROTATE_FX_IL);
 
             // std::cout << "Channel " << niChannel;
             // std::cout << " Sample " << niChannel;
@@ -85,7 +91,86 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     }
 
     esp_free(buf);
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_rotate_acc_mgmt += t_diff;
 }
+
+void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout)
+{
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+
+	const unsigned num_samples = cfg->nfft;
+	const unsigned inverse = cfg->inverse;
+	const unsigned num_ffts = NUM_FFTS;
+
+	fft2_cfg_000[0].logn_samples = (unsigned) log2(num_samples);
+	fft2_cfg_000[0].do_inverse = inverse;
+
+    t_start = clock();
+    size_t size = sizeof(fft2_token_t) * 2 * num_ffts * num_samples;
+    fft2_token_t *buf = (fft2_token_t *) esp_alloc(size);
+	fft2_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+    fft2_thread_000[0].hw_buf = buf;
+
+    // Copying buffer from fin to buf
+    for(unsigned niSample = 0; niSample < 2 * num_ffts * num_samples; niSample+=2)
+    {
+        buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+        buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+
+        // std::cout << "Sample " << niSample;
+        // std::cout << " Input " << fin[niSample];
+        // std::cout << " Output " << buf[niSample];
+        // std::cout << std::endl;
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fft2_acc_mgmt += t_diff;
+
+    // Running the accelerator
+    t_start = clock();
+    esp_run(fft2_thread_000, 1);
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fft2_acc += t_diff;
+
+    t_start = clock();
+    // Copying buffer from buf to 
+    for(unsigned niSample = 0; niSample < 2 * num_ffts * num_samples; niSample+=2)
+    {
+        fout[niSample/2].r = (float) fixed32_to_float(buf[niSample], FFT2_FX_IL);
+        fout[niSample/2].i = (float) fixed32_to_float(buf[niSample+1], FFT2_FX_IL);
+
+        // std::cout << "Sample " << niChannel;
+        // std::cout << " Input " << buf[niSample];
+        // std::cout << " Output " << fout[niSample];
+        // std::cout << std::endl;
+    }
+
+    esp_free(buf);
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fft2_acc_mgmt += t_diff;
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout)
+{
+	fft2_acc_offload(cfg, fin, fout);
+}
+
+#ifdef __cplusplus
+}
+#endif
 
 int main(int argc, char const *argv[])
 {
@@ -108,6 +193,9 @@ int main(int argc, char const *argv[])
     t_decode_filter = 0;
     t_decode_ifft = 0;
     t_total_time = 0;
+
+    do_fft2_acc_offload = 0;
+    do_rotate_acc_offload = true;
 
     if (argc < 2) {
 		std::cout << "Usage: " << argv[0] << " <number of size 1024 blocks to process> ";
@@ -154,8 +242,6 @@ int main(int argc, char const *argv[])
     std::cout << std::endl;
 
     std::cout << "Low-level:" << std::endl;
-    std::cout << "Rotate acc mgmt time " << t_rotate_acc_mgmt/numBlocks << std::endl;
-    std::cout << "Rotate acc time " << t_rotate_acc/numBlocks << std::endl;
     std::cout << "Rotate1 time " << t_rotate1/numBlocks << std::endl;
     std::cout << "Rotate2 time " << t_rotate2/numBlocks << std::endl;
     std::cout << "Rotate3 time " << t_rotate3/numBlocks << std::endl;
@@ -167,6 +253,12 @@ int main(int argc, char const *argv[])
     std::cout << "decode filter time " << t_decode_filter/numBlocks << std::endl;
     std::cout << "decode ifft time " << t_decode_ifft/numBlocks << std::endl;
     std::cout << std::endl;
+
+    std::cout << "Acc time:" << std::endl;
+    std::cout << "Rotate acc mgmt time " << t_rotate_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Rotate acc time " << t_rotate_acc/numBlocks << std::endl;
+    std::cout << "fft2 acc mgmt time " << t_fft2_acc_mgmt/numBlocks << std::endl;
+    std::cout << "fft2 acc time " << t_fft2_acc/numBlocks << std::endl;
 
     std::cout << "total time " << t_total_time/numBlocks << std::endl;
 

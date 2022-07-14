@@ -14,7 +14,7 @@ CFLAGS=-Wall -fPIC -I./include
 CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
-OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include
+OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include -I./libspatialaudio/source/kiss_fft
 HPP_FILES := $(shell find -L . -name '*.hpp')
 HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 
