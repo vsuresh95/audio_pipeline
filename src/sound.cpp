@@ -66,7 +66,7 @@ void ILLIXR_AUDIO::Sound::setSrcAmp(float ampScale) {
 
 /// TODO: Change brutal read from wav file
 std::weak_ptr<CBFormat> ILLIXR_AUDIO::Sound::readInBFormat() {
-    float sampleTemp[BLOCK_SIZE];
+    short sampleTemp[BLOCK_SIZE];
     srcFile.read((char*)sampleTemp, BLOCK_SIZE * sizeof(short));
 
     /// Normalize samples to -1 to 1 float, with amplitude scale
