@@ -121,6 +121,11 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 	fft2_cfg_000[0].esp.coherence = ACC_COH_RECALL;
     fft2_thread_000[0].hw_buf = buf;
 
+    // std::cout << "logn_samples " << fft2_cfg_000[0].logn_samples << std::endl;
+    // std::cout << "do_inverse " << fft2_cfg_000[0].do_inverse << std::endl;
+    // std::cout << "do_shift " << fft2_cfg_000[0].do_shift << std::endl;
+    // std::cout << "size " << size << std::endl;
+
     // Copying buffer from fin to buf
     for(unsigned niSample = 0; niSample < 2 * num_ffts * num_samples; niSample+=2)
     {

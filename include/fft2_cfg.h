@@ -29,7 +29,7 @@ typedef float fft2_native_t;
 #define LOGN_SAMPLES 10
 #define DO_INVERSE   0
 #define NUM_FFTS     1
-#define DO_SHIFT     1
+#define DO_SHIFT     0
 #define SCALE_FACTOR 0
 
 struct fft2_stratus_access {
