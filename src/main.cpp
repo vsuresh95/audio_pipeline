@@ -46,6 +46,11 @@ extern unsigned m_nChannelCount_copy;
 unsigned do_fft2_acc_offload;
 bool do_rotate_acc_offload;
 
+#ifndef NATIVE_COMPILE
+rotate_token_t *rotate_buf;
+fft2_token_t *fft2_buf;
+#endif
+
 struct rotate_params {
     float m_fCosAlpha;
     float m_fSinAlpha;
@@ -75,10 +80,8 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     double t_diff;
     
     t_start = clock();
-    size_t size = sizeof(rotate_token_t) * m_nChannelCount_copy * nSamples * 2;
-    rotate_token_t *buf = (rotate_token_t *) esp_alloc(size);
 	hu_audiodec_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-    hu_audiodec_thread_000[0].hw_buf = buf;
+    hu_audiodec_thread_000[0].hw_buf = rotate_buf;
 
 	hu_audiodec_cfg_000[0].cfg_regs_8   = float_to_fixed32(rotate_params_inst.m_fCosAlpha, ROTATE_FX_IL);
 	hu_audiodec_cfg_000[0].cfg_regs_9   = float_to_fixed32(rotate_params_inst.m_fSinAlpha, ROTATE_FX_IL);
@@ -106,7 +109,7 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     {
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
-            buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
+            rotate_buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
         }
     }
 
@@ -127,11 +130,9 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
     {
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
-            pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], ROTATE_FX_IL);
+            pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(rotate_buf[out_offset + niChannel*nSamples + niSample], ROTATE_FX_IL);
         }
     }
-
-    esp_free(buf);
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -158,14 +159,12 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 #endif
 
     t_start = clock();
-    size_t size = sizeof(fft2_token_t) * 2 * num_samples;
-    fft2_token_t *buf = (fft2_token_t *) esp_alloc(size);
 #ifdef FFT2
 	fft2_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-    fft2_thread_000[0].hw_buf = buf;
+    fft2_thread_000[0].hw_buf = fft2_buf;
 #else
 	fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-    fft_thread_000[0].hw_buf = buf;
+    fft_thread_000[0].hw_buf = fft2_buf;
 #endif
 
     // std::cout << "logn_samples " << fft2_cfg_000[0].logn_samples << std::endl;
@@ -176,8 +175,8 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     // Copying buffer from fin to buf
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
-        buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
-        buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+        fft2_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+        fft2_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
     }
 
     t_end = clock();
@@ -199,11 +198,9 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     // Copying buffer from buf to 
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
-        fout[niSample/2].r = (float) fixed32_to_float(buf[niSample], FFT2_FX_IL);
-        fout[niSample/2].i = (float) fixed32_to_float(buf[niSample+1], FFT2_FX_IL);
+        fout[niSample/2].r = (float) fixed32_to_float(fft2_buf[niSample], FFT2_FX_IL);
+        fout[niSample/2].i = (float) fixed32_to_float(fft2_buf[niSample+1], FFT2_FX_IL);
     }
-
-    esp_free(buf);
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -256,9 +253,6 @@ int main(int argc, char const *argv[])
     t_decode_ifft2_acc = 0;
     t_total_time = 0;
 
-    do_fft2_acc_offload = 0;
-    do_rotate_acc_offload = false;
-
     if (argc < 2) {
 		std::cout << "Usage: " << argv[0] << " <number of size 1024 blocks to process> ";
 		std::cout << "<optional: encode/decode>\n";
@@ -279,6 +273,16 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
+    do_fft2_acc_offload = 0;
+    do_rotate_acc_offload = false;
+
+    #ifndef NATIVE_COMPILE
+    size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
+    rotate_buf = (rotate_token_t *) esp_alloc(rotate_size);
+    size_t fft2_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
+    fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
+    #endif
+
     // Launch realtime audio thread for audio processing
     for (int i = 0; i < numBlocks; ++i) {
         clock_t t_start;
@@ -291,6 +295,11 @@ int main(int argc, char const *argv[])
         t_diff = double(t_end - t_start);
         t_total_time += t_diff;
     }
+
+    #ifndef NATIVE_COMPILE
+    esp_free(rotate_buf);
+    esp_free(fft2_buf);
+    #endif
 
     std::cout << "High-level:" << std::endl;
     std::cout << "Rotate zoom time " << t_rotatezoom/numBlocks << std::endl;
