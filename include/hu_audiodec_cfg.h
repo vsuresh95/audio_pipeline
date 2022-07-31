@@ -22,7 +22,7 @@ extern "C" {
 
 typedef int32_t rotate_token_t;
 
-#define ROTATE_FX_IL 16
+#define ROTATE_FX_IL 4
 
 /* <<--params-->> */
 #define CFG_REGS_0  0   	// 0: dummy
