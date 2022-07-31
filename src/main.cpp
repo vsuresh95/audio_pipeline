@@ -4,8 +4,10 @@
 #include <pthread.h>
 
 #ifndef NATIVE_COMPILE
+#define FFT2
 #include "hu_audiodec_cfg.h"
 #include "fft2_cfg.h"
+#include "fft_cfg.h"
 #endif
 
 double t_rotatezoom;
@@ -57,12 +59,6 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
             buf[niChannel*nSamples + niSample] = float_to_fixed32(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
-
-            // std::cout << "Channel " << niChannel;
-            // std::cout << " Sample " << niSample;
-            // std::cout << " Input " << pBFSrcDst->m_ppfChannels[niChannel][niSample];
-            // std::cout << " Output " << buf[niChannel*nSamples + niSample];
-            // std::cout << std::endl;
         }
     }
 
@@ -84,12 +80,6 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
         for(unsigned niSample = 0; niSample < nSamples; niSample++)
         {
             pBFSrcDst->m_ppfChannels[niChannel][niSample] = (float) fixed32_to_float(buf[out_offset + niChannel*nSamples + niSample], ROTATE_FX_IL);
-
-            // std::cout << "Channel " << niChannel;
-            // std::cout << " Sample " << niChannel;
-            // std::cout << " Input " << buf[out_offset + niChannel*nSamples + niSample];
-            // std::cout << " Output " << pBFSrcDst->m_ppfChannels[niChannel][niSample];
-            // std::cout << std::endl;
         }
     }
 
@@ -110,16 +100,25 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
 	const unsigned num_samples = cfg->nfft;
 	const unsigned inverse = cfg->inverse;
-	const unsigned num_ffts = NUM_FFTS;
 
+#ifdef FFT2
 	fft2_cfg_000[0].logn_samples = (unsigned) log2(num_samples);
 	fft2_cfg_000[0].do_inverse = inverse;
+#else
+	fft_cfg_000[0].log_len = (unsigned) log2(num_samples);
+	fft_cfg_000[0].do_bitrev = DO_BITREV;
+#endif
 
     t_start = clock();
     size_t size = sizeof(fft2_token_t) * 2 * num_ffts * num_samples;
     fft2_token_t *buf = (fft2_token_t *) esp_alloc(size);
+#ifdef FFT2
 	fft2_cfg_000[0].esp.coherence = ACC_COH_RECALL;
     fft2_thread_000[0].hw_buf = buf;
+#else
+	fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+    fft_thread_000[0].hw_buf = buf;
+#endif
 
     // std::cout << "logn_samples " << fft2_cfg_000[0].logn_samples << std::endl;
     // std::cout << "do_inverse " << fft2_cfg_000[0].do_inverse << std::endl;
@@ -131,11 +130,6 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     {
         buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
         buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
-
-        // std::cout << "Sample " << niSample;
-        // std::cout << " Input " << fin[niSample];
-        // std::cout << " Output " << buf[niSample];
-        // std::cout << std::endl;
     }
 
     t_end = clock();
@@ -144,7 +138,11 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
     // Running the accelerator
     t_start = clock();
+#ifdef FFT2
     esp_run(fft2_thread_000, 1);
+#else
+    esp_run(fft_thread_000, 1);
+#endif
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fft2_acc += t_diff;
@@ -155,11 +153,6 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     {
         fout[niSample/2].r = (float) fixed32_to_float(buf[niSample], FFT2_FX_IL);
         fout[niSample/2].i = (float) fixed32_to_float(buf[niSample+1], FFT2_FX_IL);
-
-        // std::cout << "Sample " << niChannel;
-        // std::cout << " Input " << buf[niSample];
-        // std::cout << " Output " << fout[niSample];
-        // std::cout << std::endl;
     }
 
     esp_free(buf);
