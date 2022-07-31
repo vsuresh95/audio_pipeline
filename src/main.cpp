@@ -19,6 +19,14 @@ double t_rotate_acc_mgmt;
 double t_rotate_acc;
 double t_fft2_acc_mgmt;
 double t_fft2_acc;
+double t_psycho_fft2_acc_mgmt;
+double t_psycho_fft2_acc;
+double t_psycho_ifft2_acc_mgmt;
+double t_psycho_ifft2_acc;
+double t_decode_fft2_acc_mgmt;
+double t_decode_fft2_acc;
+double t_decode_ifft2_acc_mgmt;
+double t_decode_ifft2_acc;
 
 double t_rotate1;
 double t_rotate2;
@@ -174,7 +182,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
     t_end = clock();
     t_diff = double(t_end - t_start);
-    t_fft2_acc_mgmt += t_diff;
+    t_fft2_acc_mgmt = t_diff;
 
     // Running the accelerator
     t_start = clock();
@@ -185,7 +193,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 #endif
     t_end = clock();
     t_diff = double(t_end - t_start);
-    t_fft2_acc += t_diff;
+    t_fft2_acc = t_diff;
 
     t_start = clock();
     // Copying buffer from buf to 
@@ -236,6 +244,16 @@ int main(int argc, char const *argv[])
     t_decode_fft = 0;
     t_decode_filter = 0;
     t_decode_ifft = 0;
+    t_fft2_acc_mgmt = 0;
+    t_fft2_acc = 0;
+    t_psycho_fft2_acc_mgmt = 0;
+    t_psycho_fft2_acc = 0;
+    t_psycho_ifft2_acc_mgmt = 0;
+    t_psycho_ifft2_acc = 0;
+    t_decode_fft2_acc_mgmt = 0;
+    t_decode_fft2_acc = 0;
+    t_decode_ifft2_acc_mgmt = 0;
+    t_decode_ifft2_acc = 0;
     t_total_time = 0;
 
     do_fft2_acc_offload = 0;
@@ -301,8 +319,14 @@ int main(int argc, char const *argv[])
     std::cout << "Acc time:" << std::endl;
     std::cout << "Rotate acc mgmt time " << t_rotate_acc_mgmt/numBlocks << std::endl;
     std::cout << "Rotate acc time " << t_rotate_acc/numBlocks << std::endl;
-    std::cout << "fft2 acc mgmt time " << t_fft2_acc_mgmt/numBlocks << std::endl;
-    std::cout << "fft2 acc time " << t_fft2_acc/numBlocks << std::endl;
+    std::cout << "Psycho fft2 acc mgmt time " << t_psycho_fft2_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Psycho fft2 acc time " << t_psycho_fft2_acc/numBlocks << std::endl;
+    std::cout << "Psycho ifft2 acc mgmt time " << t_psycho_ifft2_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Psycho ifft2 acc time " << t_psycho_ifft2_acc/numBlocks << std::endl;
+    std::cout << "Decode fft2 acc mgmt time " << t_decode_fft2_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Decode fft2 acc time " << t_decode_fft2_acc/numBlocks << std::endl;
+    std::cout << "Decode ifft2 acc mgmt time " << t_decode_ifft2_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Decode ifft2 acc time " << t_decode_ifft2_acc/numBlocks << std::endl;
 
     std::cout << "total time " << t_total_time/numBlocks << std::endl;
 
