@@ -158,7 +158,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 #endif
 
     t_start = clock();
-    size_t size = sizeof(fft2_token_t) * 2 * num_ffts * num_samples;
+    size_t size = sizeof(fft2_token_t) * 2 * num_samples;
     fft2_token_t *buf = (fft2_token_t *) esp_alloc(size);
 #ifdef FFT2
 	fft2_cfg_000[0].esp.coherence = ACC_COH_RECALL;
@@ -174,7 +174,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     // std::cout << "size " << size << std::endl;
 
     // Copying buffer from fin to buf
-    for(unsigned niSample = 0; niSample < 2 * num_ffts * num_samples; niSample+=2)
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
         buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
         buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
@@ -197,7 +197,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
     t_start = clock();
     // Copying buffer from buf to 
-    for(unsigned niSample = 0; niSample < 2 * num_ffts * num_samples; niSample+=2)
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
         fout[niSample/2].r = (float) fixed32_to_float(buf[niSample], FFT2_FX_IL);
         fout[niSample/2].i = (float) fixed32_to_float(buf[niSample+1], FFT2_FX_IL);
