@@ -25,7 +25,7 @@ extern "C" {
 typedef int32_t fft2_token_t;
 typedef float fft2_native_t;
 
-#define FFT2_FX_IL 14
+#define FFT2_FX_IL 4
 #define LOGN_SAMPLES 10
 #define DO_INVERSE   0
 #define NUM_FFTS     1
