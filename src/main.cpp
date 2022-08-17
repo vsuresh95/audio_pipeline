@@ -360,8 +360,8 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 1;
     do_rotate_acc_offload = false;
-    do_fir_acc_offload = false;
-    run_all = false;
+    do_fir_acc_offload = true;
+    run_all = true;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
