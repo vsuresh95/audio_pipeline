@@ -150,7 +150,7 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 #endif
 }
 
-void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout)
+void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT)
 {
 #ifndef NATIVE_COMPILE
     clock_t t_start;
@@ -177,11 +177,13 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     fft_thread_000[0].hw_buf = fft2_buf;
 #endif
 
-    // Copying buffer from fin to buf
-    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
-    {
-        fft2_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
-        fft2_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+    if (FFT) {
+        // Copying buffer from fin to buf
+        for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+        {
+            fft2_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+            fft2_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+        }
     }
 
     t_end = clock();
@@ -200,13 +202,15 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     t_fft2_acc = t_diff;
 
     t_start = clock();
-    // Copying buffer from buf to 
-    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
-    {
-        fout[niSample/2].r = (float) fixed32_to_float(fft2_buf[niSample], FFT2_FX_IL);
-        fout[niSample/2].i = (float) fixed32_to_float(fft2_buf[niSample+1], FFT2_FX_IL);
-    }
 
+    if (!FFT) {
+        // Copying buffer from buf to fout
+        for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+        {
+            fout[niSample/2].r = (float) fixed32_to_float(fft2_buf[niSample], FFT2_FX_IL);
+            fout[niSample/2].i = (float) fixed32_to_float(fft2_buf[niSample+1], FFT2_FX_IL);
+        }
+    }
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fft2_acc_mgmt += t_diff;
@@ -217,9 +221,9 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 extern "C" {
 #endif
 
-void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout)
+void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT)
 {
-	fft2_acc_offload(cfg, fin, fout);
+	fft2_acc_offload(cfg, fin, fout, FFT);
 }
 
 #ifdef __cplusplus
@@ -240,8 +244,8 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter)
     // Copying buffer from array and filter to buf
     for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
     {
-        fir_buf[ni] = float_to_fixed32(array[ni / 2].r, FIR_FX_IL);
-        fir_buf[ni + 1] = float_to_fixed32(array[ni / 2].i, FIR_FX_IL);
+        // fir_buf[ni] = float_to_fixed32(array[ni / 2].r, FIR_FX_IL);
+        // fir_buf[ni + 1] = float_to_fixed32(array[ni / 2].i, FIR_FX_IL);
         fir_buf[ni + 2 * m_nFFTBins_copy] = float_to_fixed32(filter[ni / 2].r, FIR_FX_IL);
         fir_buf[ni + 2 * m_nFFTBins_copy + 1] = float_to_fixed32(filter[ni / 2].i, FIR_FX_IL);
     }
@@ -259,11 +263,11 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter)
 
     t_start = clock();
     // Copying the buffer from buf to array
-    for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
-    {
-        array[ni / 2].r = (float) fixed32_to_float(fir_buf[ni], FIR_FX_IL);
-        array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
-    }
+    // for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
+    // {
+    //     array[ni / 2].r = (float) fixed32_to_float(fir_buf[ni], FIR_FX_IL);
+    //     array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
+    // }
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -337,9 +341,10 @@ int main(int argc, char const *argv[])
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
     rotate_buf = (rotate_token_t *) esp_alloc(rotate_size);
     size_t fft2_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
-    fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
+    // fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
     size_t fir_size = sizeof(fir_token_t) * 4 * (BLOCK_SIZE + 1);
     fir_buf = (fir_token_t *) esp_alloc(fir_size);
+    fft2_buf = fir_buf;
     #endif
 
     // Launch realtime audio thread for audio processing
