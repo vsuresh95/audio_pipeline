@@ -252,7 +252,7 @@ void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_c
 }
 #endif
 
-void fir_acc_offload(kiss_fft_cpx* filter, bool run_all)
+void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter, bool run_all)
 {
 #ifndef NATIVE_COMPILE
     clock_t t_start;
