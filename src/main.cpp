@@ -55,6 +55,8 @@ unsigned do_fft2_acc_offload;
 bool do_rotate_acc_offload;
 bool do_fir_acc_offload;
 
+bool run_all;
+
 #ifndef NATIVE_COMPILE
 rotate_token_t *rotate_buf;
 fft2_token_t *fft2_buf;
@@ -150,7 +152,7 @@ void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 #endif
 }
 
-void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT)
+void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT, bool run_all)
 {
 #ifndef NATIVE_COMPILE
     clock_t t_start;
@@ -177,7 +179,17 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     fft_thread_000[0].hw_buf = fft2_buf;
 #endif
 
-    if (FFT) {
+    if (run_all) {
+        if (FFT) {
+            // Copying buffer from fin to buf
+            for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+            {
+                fft2_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+                fft2_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+            }
+        }
+    }
+    else {
         // Copying buffer from fin to buf
         for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
         {
@@ -203,7 +215,17 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
     t_start = clock();
 
-    if (!FFT) {
+    if (run_all) {
+        if (!FFT) {
+            // Copying buffer from buf to fout
+            for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+            {
+                fout[niSample/2].r = (float) fixed32_to_float(fft2_buf[niSample], FFT2_FX_IL);
+                fout[niSample/2].i = (float) fixed32_to_float(fft2_buf[niSample+1], FFT2_FX_IL);
+            }
+        }
+    }
+    else {
         // Copying buffer from buf to fout
         for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
         {
@@ -221,16 +243,16 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 extern "C" {
 #endif
 
-void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT)
+void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *fout, bool FFT, bool run_all)
 {
-	fft2_acc_offload(cfg, fin, fout, FFT);
+	fft2_acc_offload(cfg, fin, fout, FFT, run_all);
 }
 
 #ifdef __cplusplus
 }
 #endif
 
-void fir_acc_offload(kiss_fft_cpx* filter)
+void fir_acc_offload(kiss_fft_cpx* filter, bool run_all)
 {
 #ifndef NATIVE_COMPILE
     clock_t t_start;
@@ -244,8 +266,10 @@ void fir_acc_offload(kiss_fft_cpx* filter)
     // Copying buffer from array and filter to buf
     for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
     {
-        // fir_buf[ni] = float_to_fixed32(array[ni / 2].r, FIR_FX_IL);
-        // fir_buf[ni + 1] = float_to_fixed32(array[ni / 2].i, FIR_FX_IL);
+        if (!run_all) {
+            fir_buf[ni] = float_to_fixed32(array[ni / 2].r, FIR_FX_IL);
+            fir_buf[ni + 1] = float_to_fixed32(array[ni / 2].i, FIR_FX_IL);
+        }
         fir_buf[ni + 2 * m_nFFTBins_copy] = float_to_fixed32(filter[ni / 2].r, FIR_FX_IL);
         fir_buf[ni + 2 * m_nFFTBins_copy + 1] = float_to_fixed32(filter[ni / 2].i, FIR_FX_IL);
     }
@@ -262,13 +286,14 @@ void fir_acc_offload(kiss_fft_cpx* filter)
     t_fir_acc += t_diff;
 
     t_start = clock();
-    // Copying the buffer from buf to array
-    // for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
-    // {
-    //     array[ni / 2].r = (float) fixed32_to_float(fir_buf[ni], FIR_FX_IL);
-    //     array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
-    // }
-
+    if (!run_all) {
+        // Copying the buffer from buf to array
+        for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
+        {
+            array[ni / 2].r = (float) fixed32_to_float(fir_buf[ni], FIR_FX_IL);
+            array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
+        }
+    }
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fir_acc_mgmt += t_diff;
@@ -336,6 +361,7 @@ int main(int argc, char const *argv[])
     do_fft2_acc_offload = 1;
     do_rotate_acc_offload = false;
     do_fir_acc_offload = false;
+    run_all = false;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
