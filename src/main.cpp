@@ -358,10 +358,10 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    do_fft2_acc_offload = 1;
+    do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
     do_fir_acc_offload = true;
-    run_all = true;
+    run_all = false;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
