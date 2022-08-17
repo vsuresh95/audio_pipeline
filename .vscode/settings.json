@@ -48,6 +48,10 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "bit": "cpp",
+        "functional": "cpp",
+        "numeric": "cpp",
+        "random": "cpp"
     }
 }

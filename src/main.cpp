@@ -8,6 +8,7 @@
 #include "hu_audiodec_cfg.h"
 #include "fft2_cfg.h"
 #include "fft_cfg.h"
+#include "fir_cfg.h"
 #endif
 
 double t_rotatezoom;
@@ -19,12 +20,18 @@ double t_rotate_acc_mgmt;
 double t_rotate_acc;
 double t_fft2_acc_mgmt;
 double t_fft2_acc;
+double t_fir_acc_mgmt;
+double t_fir_acc;
 double t_psycho_fft2_acc_mgmt;
 double t_psycho_fft2_acc;
+double t_psycho_fir_acc_mgmt;
+double t_psycho_fir_acc;
 double t_psycho_ifft2_acc_mgmt;
 double t_psycho_ifft2_acc;
 double t_decode_fft2_acc_mgmt;
 double t_decode_fft2_acc;
+double t_decode_fir_acc_mgmt;
+double t_decode_fir_acc;
 double t_decode_ifft2_acc_mgmt;
 double t_decode_ifft2_acc;
 
@@ -42,13 +49,16 @@ double t_decode_ifft;
 double t_total_time;
 
 extern unsigned m_nChannelCount_copy;
+extern unsigned m_nFFTBins_copy;
 
 unsigned do_fft2_acc_offload;
 bool do_rotate_acc_offload;
+bool do_fir_acc_offload;
 
 #ifndef NATIVE_COMPILE
 rotate_token_t *rotate_buf;
 fft2_token_t *fft2_buf;
+fir_token_t *fir_buf;
 #endif
 
 struct rotate_params {
@@ -216,6 +226,51 @@ void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_c
 }
 #endif
 
+void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter)
+{
+#ifndef NATIVE_COMPILE
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+
+    t_start = clock();
+    fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+    fir_thread_000[0].hw_buf = fir_buf;
+
+    // Copying buffer from array and filter to buf
+    for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
+    {
+        fir_buf[ni] = float_to_fixed32(array[ni / 2].r, FIR_FX_IL);
+        fir_buf[ni + 1] = float_to_fixed32(array[ni / 2].i, FIR_FX_IL);
+        fir_buf[ni + 2 * m_nFFTBins_copy] = float_to_fixed32(filter[ni / 2].r, FIR_FX_IL);
+        fir_buf[ni + 2 * m_nFFTBins_copy + 1] = float_to_fixed32(filter[ni / 2].i, FIR_FX_IL);
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fir_acc_mgmt += t_diff;
+
+    // Running the accelerator
+    t_start = clock();
+    esp_run(fir_thread_000, 1);
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fir_acc += t_diff;
+
+    t_start = clock();
+    // Copying the buffer from buf to array
+    for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
+    {
+        array[ni / 2].r = (float) fixed32_to_float(fir_buf[ni], FIR_FX_IL);
+        array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_fir_acc_mgmt += t_diff;
+#endif
+}
+
 int main(int argc, char const *argv[])
 {
     using namespace ILLIXR_AUDIO;
@@ -238,12 +293,18 @@ int main(int argc, char const *argv[])
     t_decode_ifft = 0;
     t_fft2_acc_mgmt = 0;
     t_fft2_acc = 0;
+    t_fir_acc_mgmt = 0;
+    t_fir_acc = 0;
     t_psycho_fft2_acc_mgmt = 0;
     t_psycho_fft2_acc = 0;
+    t_psycho_fir_acc_mgmt = 0;
+    t_psycho_fir_acc = 0;
     t_psycho_ifft2_acc_mgmt = 0;
     t_psycho_ifft2_acc = 0;
     t_decode_fft2_acc_mgmt = 0;
     t_decode_fft2_acc = 0;
+    t_decode_fir_acc_mgmt = 0;
+    t_decode_fir_acc = 0;
     t_decode_ifft2_acc_mgmt = 0;
     t_decode_ifft2_acc = 0;
     t_total_time = 0;
@@ -270,12 +331,15 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
+    do_fir_acc_offload = false;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
     rotate_buf = (rotate_token_t *) esp_alloc(rotate_size);
     size_t fft2_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
     fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
+    size_t fir_size = sizeof(fir_token_t) * 4 * (BLOCK_SIZE + 1);
+    fir_buf = (fir_token_t *) esp_alloc(fir_size);
     #endif
 
     // Launch realtime audio thread for audio processing
@@ -325,10 +389,14 @@ int main(int argc, char const *argv[])
     std::cout << "Rotate acc time " << t_rotate_acc/numBlocks << std::endl;
     std::cout << "Psycho fft2 acc mgmt time " << t_psycho_fft2_acc_mgmt/numBlocks << std::endl;
     std::cout << "Psycho fft2 acc time " << t_psycho_fft2_acc/numBlocks << std::endl;
+    std::cout << "Psycho fir acc mgmt time " << t_psycho_fir_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Psycho fir acc time " << t_psycho_fir_acc/numBlocks << std::endl;
     std::cout << "Psycho ifft2 acc mgmt time " << t_psycho_ifft2_acc_mgmt/numBlocks << std::endl;
     std::cout << "Psycho ifft2 acc time " << t_psycho_ifft2_acc/numBlocks << std::endl;
     std::cout << "Decode fft2 acc mgmt time " << t_decode_fft2_acc_mgmt/numBlocks << std::endl;
     std::cout << "Decode fft2 acc time " << t_decode_fft2_acc/numBlocks << std::endl;
+    std::cout << "Decode fir acc mgmt time " << t_decode_fir_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Decode fir acc time " << t_decode_fir_acc/numBlocks << std::endl;
     std::cout << "Decode ifft2 acc mgmt time " << t_decode_ifft2_acc_mgmt/numBlocks << std::endl;
     std::cout << "Decode ifft2 acc time " << t_decode_ifft2_acc/numBlocks << std::endl;
 
