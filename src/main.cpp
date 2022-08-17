@@ -333,7 +333,7 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    do_fft2_acc_offload = 0;
+    do_fft2_acc_offload = 1;
     do_rotate_acc_offload = false;
     do_fir_acc_offload = false;
 
