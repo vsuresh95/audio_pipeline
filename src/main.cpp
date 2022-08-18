@@ -162,6 +162,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 	const unsigned num_samples = cfg->nfft;
 	const unsigned inverse = cfg->inverse;
 
+    printf("Entering fft2_acc_offload\n");
 #ifdef FFT2
 	fft2_cfg_000[0].logn_samples = (unsigned) log2(num_samples);
 	fft2_cfg_000[0].do_inverse = inverse;
@@ -179,6 +180,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
     fft_thread_000[0].hw_buf = fft2_buf;
 #endif
 
+    printf("Before copying buffer from fin to buf\n");
     if (run_all) {
         if (FFT) {
             // Copying buffer from fin to buf
@@ -197,6 +199,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
             fft2_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
         }
     }
+    printf("After copying buffer from fin to buf\n");
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -204,17 +207,19 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
 
     // Running the accelerator
     t_start = clock();
+    printf("Before Acc launch\n");
 #ifdef FFT2
     esp_run(fft2_thread_000, 1);
 #else
     esp_run(fft_thread_000, 1);
 #endif
+    printf("After Acc launch\n");
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fft2_acc = t_diff;
 
     t_start = clock();
-
+    printf("Before copying the buffer from buf to fout\n");
     if (run_all) {
         if (!FFT) {
             // Copying buffer from buf to fout
@@ -233,6 +238,7 @@ void fft2_acc_offload(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_cpx *f
             fout[niSample/2].i = (float) fixed32_to_float(fft2_buf[niSample+1], FFT2_FX_IL);
         }
     }
+    printf("After copying the buffer from buf to fout\n");
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fft2_acc_mgmt += t_diff;
@@ -365,9 +371,9 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    do_fft2_acc_offload = 0;
+    do_fft2_acc_offload = 1;
     do_rotate_acc_offload = false;
-    do_fir_acc_offload = true;
+    do_fir_acc_offload = false;
     run_all = false;
 
     #ifndef NATIVE_COMPILE
