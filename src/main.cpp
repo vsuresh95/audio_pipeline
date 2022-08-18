@@ -259,10 +259,12 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter, bool run_all)
     clock_t t_end;
     double t_diff;
 
+    printf("Entering fir_acc_offload\n");
     t_start = clock();
     fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
     fir_thread_000[0].hw_buf = fir_buf;
 
+    printf("Before copying buffer from array and filter to buf\n");
     // Copying buffer from array and filter to buf
     for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
     {
@@ -273,6 +275,7 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter, bool run_all)
         fir_buf[ni + 2 * m_nFFTBins_copy] = float_to_fixed32(filter[ni / 2].r, FIR_FX_IL);
         fir_buf[ni + 2 * m_nFFTBins_copy + 1] = float_to_fixed32(filter[ni / 2].i, FIR_FX_IL);
     }
+    printf("After copying buffer from array and filter to buf\n");
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -280,12 +283,15 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter, bool run_all)
 
     // Running the accelerator
     t_start = clock();
+    printf("Before Acc launch\n");
     esp_run(fir_thread_000, 1);
+    printf("After Acc done\n");
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fir_acc += t_diff;
 
     t_start = clock();
+    printf("Before copying the buffer from buf to array\n");
     if (!run_all) {
         // Copying the buffer from buf to array
         for (unsigned ni = 0; ni < 2 * m_nFFTBins_copy; ni += 2)
@@ -294,6 +300,7 @@ void fir_acc_offload(kiss_fft_cpx* array, kiss_fft_cpx* filter, bool run_all)
             array[ni / 2].i = (float) fixed32_to_float(fir_buf[ni + 1], FIR_FX_IL);
         }
     }
+    printf("After copying the buffer from buf to array\n");
     t_end = clock();
     t_diff = double(t_end - t_start);
     t_fir_acc_mgmt += t_diff;
@@ -360,7 +367,7 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
-    do_fir_acc_offload = false;
+    do_fir_acc_offload = true;
     run_all = false;
 
     #ifndef NATIVE_COMPILE
