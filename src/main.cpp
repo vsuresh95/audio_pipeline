@@ -360,7 +360,7 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
-    do_fir_acc_offload = true;
+    do_fir_acc_offload = false;
     run_all = false;
 
     #ifndef NATIVE_COMPILE
