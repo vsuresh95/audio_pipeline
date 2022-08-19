@@ -373,7 +373,7 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 1;
     do_rotate_acc_offload = false;
-    do_fir_acc_offload = false;
+    do_fir_acc_offload = true;
     run_all = false;
 
     #ifndef NATIVE_COMPILE
