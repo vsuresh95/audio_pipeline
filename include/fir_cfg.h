@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include "_kiss_fft_guts.h"
-
 #include <libesp.h>
 #include <esp.h>
 #include <esp_accelerator.h>
