@@ -145,6 +145,17 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
         t_end = clock();
         t_diff = double(t_end - t_start);
         t_decode += t_diff;
+
+        // for(unsigned ni = 0; ni < 2; ni++)
+        // {
+        //     std::cout << "Ear " << ni << std::endl;
+        //     for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++)
+        //     {
+        //         if (niSample % 8 == 0) std::cout << std::endl;
+        //         std::cout << resultSample[ni][niSample] << ", ";
+        //     }
+        //     std::cout << std::endl;
+        // }
     }
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
