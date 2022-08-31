@@ -8,6 +8,8 @@
 #include "hu_audiodec_cfg.h"
 #include "fft2_cfg.h"
 #include "fft_cfg.h"
+#include "fir_cfg.h"
+#include "chain_cfg.h"
 #endif
 
 double t_rotatezoom;
@@ -39,16 +41,32 @@ double t_decode_fft;
 double t_decode_filter;
 double t_decode_ifft;
 
+double t_chain_acc_mgmt;
+double t_chain_acc;
+double t_psycho_chain_acc_mgmt;
+double t_psycho_chain_acc;
+double t_psycho_chain;
+double t_decode_chain_acc_mgmt;
+double t_decode_chain_acc;
+double t_decode_chain;
+
 double t_total_time;
 
 extern unsigned m_nChannelCount_copy;
 
 unsigned do_fft2_acc_offload;
 bool do_rotate_acc_offload;
+bool do_chain_acc_offload;
 
 #ifndef NATIVE_COMPILE
 rotate_token_t *rotate_buf;
 fft2_token_t *fft2_buf;
+
+fft2_token_t *chain_buf;
+volatile fft2_token_t* sm_sync;
+size_t chain_size;
+size_t acc_size;
+unsigned acc_offset;
 #endif
 
 struct rotate_params {
@@ -216,6 +234,75 @@ void fft2_acc_offload_wrap(kiss_fft_cfg cfg, const kiss_fft_cpx *fin, kiss_fft_c
 }
 #endif
 
+void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx *flt)
+{
+#ifndef NATIVE_COMPILE
+    clock_t t_start;
+    clock_t t_end;
+    double t_diff;
+   
+	const unsigned num_samples = cfg->substate->nfft;
+
+    const kiss_fft_cpx *twd = cfg->super_twiddles;
+
+    t_start = clock();
+
+    // Copying buffer from fin to fft input buffer
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+    {
+        chain_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+        chain_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+    }
+
+    unsigned flt_offset = acc_offset + 4 * (2 * num_samples);
+
+    // Copying buffer from flt to fir filter buffer
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+    {
+        chain_buf[flt_offset+niSample] = float_to_fixed32((fft2_native_t) flt[niSample/2].r, FFT2_FX_IL);
+        chain_buf[flt_offset+niSample+1] = float_to_fixed32((fft2_native_t) flt[niSample/2].i, FFT2_FX_IL);
+    }
+    
+    unsigned twd_offset = acc_offset + 6 * (2 * num_samples);
+
+    // Copying buffer from twd to fir twiddle buffer
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+    {
+        chain_buf[twd_offset+niSample] = float_to_fixed32((fft2_native_t) twd[niSample/2].r, FFT2_FX_IL);
+        chain_buf[twd_offset+niSample+1] = float_to_fixed32((fft2_native_t) twd[niSample/2].i, FFT2_FX_IL);
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_chain_acc_mgmt = t_diff;
+
+    t_start = clock();
+
+    // Start first accelerator
+	sm_sync[0] = 1;
+    // Wait for last accelerator
+	while(sm_sync[NUM_DEVICES*acc_offset] != 1);
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_chain_acc = t_diff;
+
+    t_start = clock();
+    unsigned out_offset = NUM_DEVICES*acc_offset;
+
+    // Copying buffer from ifft output back to fin
+    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
+    {
+        fin[niSample/2].r = (fft2_native_t) fixed32_to_float(chain_buf[out_offset+niSample], FFT2_FX_IL);
+        fin[niSample/2].i = (fft2_native_t) fixed32_to_float(chain_buf[out_offset+niSample+1], FFT2_FX_IL);
+    }
+
+    t_end = clock();
+    t_diff = double(t_end - t_start);
+    t_chain_acc_mgmt += t_diff;
+#endif
+}
+
 int main(int argc, char const *argv[])
 {
     using namespace ILLIXR_AUDIO;
@@ -246,6 +333,14 @@ int main(int argc, char const *argv[])
     t_decode_fft2_acc = 0;
     t_decode_ifft2_acc_mgmt = 0;
     t_decode_ifft2_acc = 0;
+    t_chain_acc_mgmt = 0;
+    t_chain_acc = 0;
+    t_psycho_chain_acc_mgmt = 0;
+    t_psycho_chain_acc = 0;
+    t_psycho_chain = 0;
+    t_decode_chain_acc_mgmt = 0;
+    t_decode_chain_acc = 0;
+    t_decode_chain = 0;
     t_total_time = 0;
 
     if (argc < 2) {
@@ -270,12 +365,44 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
+    do_chain_acc_offload = false;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
     rotate_buf = (rotate_token_t *) esp_alloc(rotate_size);
     size_t fft2_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
     fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
+
+    // Chaining code
+    size_t chain_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
+	acc_size = chain_size + (SYNC_VAR_SIZE * sizeof(fft2_token_t));
+    acc_offset = BLOCK_SIZE + SYNC_VAR_SIZE;
+    chain_size *= NUM_DEVICES+5;
+    chain_buf = (fft2_token_t *) esp_alloc(chain_size);
+
+	chain_thread_000[0].hw_buf = chain_buf;
+	chain_thread_001[0].hw_buf = chain_buf;
+	chain_thread_002[0].hw_buf = chain_buf;
+
+    chain_fft_cfg_001[0].src_offset = 2 * acc_size;
+    chain_fft_cfg_001[0].dst_offset = 2 * acc_size;
+
+    chain_fir_cfg_000[0].src_offset = acc_size;
+    chain_fir_cfg_000[0].dst_offset = acc_size;
+
+    // Invoke accelerators but do not check for end
+	chain_fft_cfg_000[0].esp.start_stop = 1;
+	chain_fft_cfg_001[0].esp.start_stop = 1;
+	chain_fir_cfg_000[0].esp.start_stop = 1;
+
+    sm_sync = (volatile fft2_token_t*) chain_buf;
+
+    // Start all 3 accelerators
+    if (do_chain_acc_offload) {
+        esp_run(chain_thread_000, 1);
+        esp_run(chain_thread_001, 1);
+        esp_run(chain_thread_002, 1);
+    }
     #endif
 
     // Launch realtime audio thread for audio processing
@@ -331,6 +458,11 @@ int main(int argc, char const *argv[])
     std::cout << "Decode fft2 acc time " << t_decode_fft2_acc/numBlocks << std::endl;
     std::cout << "Decode ifft2 acc mgmt time " << t_decode_ifft2_acc_mgmt/numBlocks << std::endl;
     std::cout << "Decode ifft2 acc time " << t_decode_ifft2_acc/numBlocks << std::endl;
+
+    std::cout << "Psycho chain acc mgmt time " << t_psycho_chain_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Psycho chain acc time " << t_psycho_chain_acc/numBlocks << std::endl;
+    std::cout << "Decode chain acc mgmt time " << t_decode_chain_acc_mgmt/numBlocks << std::endl;
+    std::cout << "Decode chain acc time " << t_decode_chain_acc/numBlocks << std::endl;
 
     std::cout << "total time " << t_total_time/numBlocks << std::endl;
 
