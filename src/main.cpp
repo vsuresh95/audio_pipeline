@@ -250,8 +250,8 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
     // Copying buffer from fin to fft input buffer
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
-        chain_buf[niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
-        chain_buf[niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
+        chain_buf[SYNC_VAR_SIZE+niSample] = float_to_fixed32((fft2_native_t) fin[niSample/2].r, FFT2_FX_IL);
+        chain_buf[SYNC_VAR_SIZE+niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
     }
 
     unsigned flt_offset = acc_offset + 4 * (2 * num_samples);
@@ -288,7 +288,7 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
     t_chain_acc = t_diff;
 
     t_start = clock();
-    unsigned out_offset = NUM_DEVICES*acc_offset;
+    unsigned out_offset = NUM_DEVICES*acc_offset+SYNC_VAR_SIZE;
 
     // Copying buffer from ifft output back to fin
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
@@ -365,7 +365,7 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
-    do_chain_acc_offload = false;
+    do_chain_acc_offload = true;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
@@ -376,9 +376,13 @@ int main(int argc, char const *argv[])
     // Chaining code
     size_t chain_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
 	acc_size = chain_size + (SYNC_VAR_SIZE * sizeof(fft2_token_t));
-    acc_offset = BLOCK_SIZE + SYNC_VAR_SIZE;
+    acc_offset = (2 * BLOCK_SIZE) + SYNC_VAR_SIZE;
     chain_size *= NUM_DEVICES+5;
     chain_buf = (fft2_token_t *) esp_alloc(chain_size);
+
+	for (unsigned j = 0; j < acc_offset + (7 * BLOCK_SIZE); j++) {
+        chain_buf[j] = 0;
+    }
 
 	chain_thread_000[0].hw_buf = chain_buf;
 	chain_thread_001[0].hw_buf = chain_buf;
@@ -421,6 +425,7 @@ int main(int argc, char const *argv[])
     #ifndef NATIVE_COMPILE
     esp_free(rotate_buf);
     esp_free(fft2_buf);
+    esp_free(chain_buf);
     #endif
 
     std::cout << "High-level:" << std::endl;
