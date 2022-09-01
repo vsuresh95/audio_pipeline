@@ -86,7 +86,7 @@ esp_thread_info_t chain_thread_000[] = {
 esp_thread_info_t chain_thread_001[] = {
 	{
 		.run = true,
-		.devname = chain_fft2_0_dev_name,
+		.devname = chain_fft2_1_dev_name,
 		.ioctl_req = CHAIN_FFT_STRATUS_IOC_ACCESS,
 		.esp_desc = &(chain_fft_cfg_001[0].esp),
 	}
