@@ -67,6 +67,8 @@ volatile fft2_token_t* sm_sync;
 size_t chain_size;
 size_t acc_size;
 unsigned acc_offset;
+
+static bool twd_copy_done = false;
 #endif
 
 struct rotate_params {
@@ -275,11 +277,9 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
 	sm_sync[3*acc_offset] = 0;
 
     // Start all 3 accelerators
-    if (do_chain_acc_offload) {
-        esp_run(chain_thread_000, 1);
-        esp_run(chain_thread_001, 1);
-        esp_run(chain_thread_002, 1);
-    }
+    esp_run(chain_thread_000, 1);
+    esp_run(chain_thread_001, 1);
+    esp_run(chain_thread_002, 1);
 
     // Copying buffer from fin to fft input buffer
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
@@ -299,11 +299,15 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
     
     unsigned twd_offset = acc_offset + 6 * (2 * num_samples);
 
-    // Copying buffer from twd to fir twiddle buffer
-    for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
-    {
-        chain_buf[twd_offset+niSample] = float_to_fixed32((fft2_native_t) twd[niSample/2].r, FFT2_FX_IL);
-        chain_buf[twd_offset+niSample+1] = float_to_fixed32((fft2_native_t) twd[niSample/2].i, FFT2_FX_IL);
+    // Copying buffer from twd to fir twiddle buffer - only once
+    if (!twd_copy_done) {
+        for(unsigned niSample = 0; niSample < num_samples; niSample+=2)
+        {
+            chain_buf[twd_offset+niSample] = float_to_fixed32((fft2_native_t) twd[niSample/2].r, FFT2_FX_IL);
+            chain_buf[twd_offset+niSample+1] = float_to_fixed32((fft2_native_t) twd[niSample/2].i, FFT2_FX_IL);
+        }
+
+        twd_copy_done = true;
     }
 
     t_end = clock();
@@ -398,7 +402,7 @@ int main(int argc, char const *argv[])
     audio.num_blocks_left = numBlocks;
 
     do_fft2_acc_offload = 0;
-    do_rotate_acc_offload = false;
+    do_rotate_acc_offload = true;
     do_chain_acc_offload = true;
 
     #ifndef NATIVE_COMPILE
