@@ -249,38 +249,6 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
 
     t_start = clock();
 
-	chain_fft_cfg_000[0].logn_samples = (unsigned) log2(num_samples);
-	chain_fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-	chain_fft_cfg_001[0].logn_samples = (unsigned) log2(num_samples);
-	chain_fft_cfg_001[0].esp.coherence = ACC_COH_RECALL;
-	chain_fir_cfg_000[0].logn_samples = (unsigned) log2(num_samples);
-	chain_fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-
-	chain_thread_000[0].hw_buf = chain_buf;
-	chain_thread_001[0].hw_buf = chain_buf;
-	chain_thread_002[0].hw_buf = chain_buf;
-
-    chain_fft_cfg_001[0].src_offset = 2 * acc_size;
-    chain_fft_cfg_001[0].dst_offset = 2 * acc_size;
-
-    chain_fir_cfg_000[0].src_offset = acc_size;
-    chain_fir_cfg_000[0].dst_offset = acc_size;
-
-    // Invoke accelerators but do not check for end
-	chain_fft_cfg_000[0].esp.start_stop = 1;
-	chain_fft_cfg_001[0].esp.start_stop = 1;
-	chain_fir_cfg_000[0].esp.start_stop = 1;
-
-	sm_sync[0] = 0;
-	sm_sync[acc_offset] = 0;
-	sm_sync[2*acc_offset] = 0;
-	sm_sync[3*acc_offset] = 0;
-
-    // Start all 3 accelerators
-    esp_run(chain_thread_000, 1);
-    esp_run(chain_thread_001, 1);
-    esp_run(chain_thread_002, 1);
-
     // Copying buffer from fin to fft input buffer
     for(unsigned niSample = 0; niSample < 2 * num_samples; niSample+=2)
     {
@@ -288,7 +256,7 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
         chain_buf[SYNC_VAR_SIZE+niSample+1] = float_to_fixed32((fft2_native_t) fin[niSample/2].i, FFT2_FX_IL);
     }
 
-    unsigned flt_offset = acc_offset + 4 * (2 * num_samples);
+    unsigned flt_offset = 5 * acc_offset;
 
     // Copying buffer from flt to fir filter buffer
     for(unsigned niSample = 0; niSample < 2 * (num_samples+1); niSample+=2)
@@ -297,7 +265,7 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
         chain_buf[flt_offset+niSample+1] = float_to_fixed32((fft2_native_t) flt[niSample/2].i, FFT2_FX_IL);
     }
     
-    unsigned twd_offset = acc_offset + 6 * (2 * num_samples);
+    unsigned twd_offset = 7 * acc_offset;
 
     // Copying buffer from twd to fir twiddle buffer - only once
     if (!twd_copy_done) {
@@ -316,10 +284,15 @@ void chain_acc_offload(kiss_fftr_cfg cfg, kiss_fft_cpx *fin, const kiss_fft_cpx 
 
     t_start = clock();
 
+	sm_sync[2] = 0;
+	sm_sync[acc_offset+2] = 0;
+	sm_sync[2*acc_offset+2] = 0;
+
     // Start first accelerator
 	sm_sync[0] = 1;
     // Wait for last accelerator
 	while(sm_sync[NUM_DEVICES*acc_offset] != 1);
+	sm_sync[NUM_DEVICES*acc_offset] = 0;
 
     t_end = clock();
     t_diff = double(t_end - t_start);
@@ -423,6 +396,40 @@ int main(int argc, char const *argv[])
     }
 
     sm_sync = (volatile fft2_token_t*) chain_buf;
+   
+	chain_fft_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+	chain_fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+	chain_fft_cfg_001[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+	chain_fft_cfg_001[0].esp.coherence = ACC_COH_RECALL;
+	chain_fir_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+	chain_fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+
+	chain_thread_000[0].hw_buf = chain_buf;
+	chain_thread_001[0].hw_buf = chain_buf;
+	chain_thread_002[0].hw_buf = chain_buf;
+
+    chain_fft_cfg_001[0].src_offset = 2 * acc_size;
+    chain_fft_cfg_001[0].dst_offset = 2 * acc_size;
+
+    chain_fir_cfg_000[0].src_offset = acc_size;
+    chain_fir_cfg_000[0].dst_offset = acc_size;
+
+    // Invoke accelerators but do not check for end
+	chain_fft_cfg_000[0].esp.start_stop = 1;
+	chain_fft_cfg_001[0].esp.start_stop = 1;
+	chain_fir_cfg_000[0].esp.start_stop = 1;
+
+	sm_sync[0] = 0;
+	sm_sync[acc_offset] = 0;
+	sm_sync[2*acc_offset] = 0;
+	sm_sync[3*acc_offset] = 0;
+
+    // Start all 3 accelerators
+    if (do_chain_acc_offload) {
+        esp_run(chain_thread_000, 1);
+        esp_run(chain_thread_001, 1);
+        esp_run(chain_thread_002, 1); 
+    }
     #endif
 
     // Launch realtime audio thread for audio processing
@@ -438,7 +445,18 @@ int main(int argc, char const *argv[])
         t_total_time += t_diff;
     }
 
-    #ifndef NATIVE_COMPILE
+    #ifndef NATIVE_COMPILE    
+    // End accelerator operation with a dummy iteration
+    if (do_chain_acc_offload) {
+	    sm_sync[2] = 1;
+	    sm_sync[acc_offset+2] = 1;
+	    sm_sync[2*acc_offset+2] = 1;
+
+	    sm_sync[0] = 1;
+	    while(sm_sync[NUM_DEVICES*acc_offset] != 1);
+	    sm_sync[NUM_DEVICES*acc_offset] = 0;
+    }
+
     esp_free(rotate_buf);
     esp_free(fft2_buf);
     esp_free(chain_buf);

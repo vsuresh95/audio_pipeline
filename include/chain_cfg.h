@@ -16,7 +16,7 @@ extern "C" {
 #define DO_SHIFT     0
 #define SCALE_FACTOR 0
 
-#define SYNC_VAR_SIZE 2
+#define SYNC_VAR_SIZE 4
 #define NUM_DEVICES 3
 
 struct kiss_fftr_state{
