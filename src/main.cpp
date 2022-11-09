@@ -374,9 +374,9 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    do_fft2_acc_offload = 0;
-    do_rotate_acc_offload = true;
-    do_chain_acc_offload = true;
+    do_fft2_acc_offload = 1;
+    do_rotate_acc_offload = false;
+    do_chain_acc_offload = false;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
@@ -385,47 +385,47 @@ int main(int argc, char const *argv[])
     fft2_buf = (fft2_token_t *) esp_alloc(fft2_size);
 
     // Chaining code
-    size_t chain_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
-	acc_size = chain_size + (SYNC_VAR_SIZE * sizeof(fft2_token_t));
-    acc_offset = (2 * BLOCK_SIZE) + SYNC_VAR_SIZE;
-    chain_size *= NUM_DEVICES+5;
-    chain_buf = (fft2_token_t *) esp_alloc(chain_size);
-
-	for (unsigned j = 0; j < acc_offset + (7 * BLOCK_SIZE); j++) {
-        chain_buf[j] = 0;
-    }
-
-    sm_sync = (volatile fft2_token_t*) chain_buf;
-   
-	chain_fft_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
-	chain_fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-	chain_fft_cfg_001[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
-	chain_fft_cfg_001[0].esp.coherence = ACC_COH_RECALL;
-	chain_fir_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
-	chain_fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
-
-	chain_thread_000[0].hw_buf = chain_buf;
-	chain_thread_001[0].hw_buf = chain_buf;
-	chain_thread_002[0].hw_buf = chain_buf;
-
-    chain_fft_cfg_001[0].src_offset = 2 * acc_size;
-    chain_fft_cfg_001[0].dst_offset = 2 * acc_size;
-
-    chain_fir_cfg_000[0].src_offset = acc_size;
-    chain_fir_cfg_000[0].dst_offset = acc_size;
-
-    // Invoke accelerators but do not check for end
-	chain_fft_cfg_000[0].esp.start_stop = 1;
-	chain_fft_cfg_001[0].esp.start_stop = 1;
-	chain_fir_cfg_000[0].esp.start_stop = 1;
-
-	sm_sync[0] = 0;
-	sm_sync[acc_offset] = 0;
-	sm_sync[2*acc_offset] = 0;
-	sm_sync[3*acc_offset] = 0;
-
-    // Start all 3 accelerators
     if (do_chain_acc_offload) {
+        size_t chain_size = sizeof(fft2_token_t) * 2 * BLOCK_SIZE;
+        acc_size = chain_size + (SYNC_VAR_SIZE * sizeof(fft2_token_t));
+        acc_offset = (2 * BLOCK_SIZE) + SYNC_VAR_SIZE;
+        chain_size *= NUM_DEVICES+5;
+        chain_buf = (fft2_token_t *) esp_alloc(chain_size);
+
+        for (unsigned j = 0; j < acc_offset + (7 * BLOCK_SIZE); j++) {
+        chain_buf[j] = 0;
+        }
+
+        sm_sync = (volatile fft2_token_t*) chain_buf;
+
+        chain_fft_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+        chain_fft_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+        chain_fft_cfg_001[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+        chain_fft_cfg_001[0].esp.coherence = ACC_COH_RECALL;
+        chain_fir_cfg_000[0].logn_samples = (unsigned) log2(BLOCK_SIZE);
+        chain_fir_cfg_000[0].esp.coherence = ACC_COH_RECALL;
+
+        chain_thread_000[0].hw_buf = chain_buf;
+        chain_thread_001[0].hw_buf = chain_buf;
+        chain_thread_002[0].hw_buf = chain_buf;
+
+        chain_fft_cfg_001[0].src_offset = 2 * acc_size;
+        chain_fft_cfg_001[0].dst_offset = 2 * acc_size;
+
+        chain_fir_cfg_000[0].src_offset = acc_size;
+        chain_fir_cfg_000[0].dst_offset = acc_size;
+
+        // Invoke accelerators but do not check for end
+        chain_fft_cfg_000[0].esp.start_stop = 1;
+        chain_fft_cfg_001[0].esp.start_stop = 1;
+        chain_fir_cfg_000[0].esp.start_stop = 1;
+
+        sm_sync[0] = 0;
+        sm_sync[acc_offset] = 0;
+        sm_sync[2*acc_offset] = 0;
+        sm_sync[3*acc_offset] = 0;
+
+        // Start all 3 accelerators
         esp_run(chain_thread_000, 1);
         esp_run(chain_thread_001, 1);
         esp_run(chain_thread_002, 1); 
@@ -459,7 +459,9 @@ int main(int argc, char const *argv[])
 
     esp_free(rotate_buf);
     esp_free(fft2_buf);
-    esp_free(chain_buf);
+    if (do_chain_acc_offload) {
+        esp_free(chain_buf);
+    }
     #endif
 
     std::cout << "High-level:" << std::endl;
