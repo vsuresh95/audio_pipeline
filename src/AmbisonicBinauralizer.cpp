@@ -35,14 +35,22 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     m_pfScratchBufferC = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
 
     //Allocate overlap-add buffers
-    m_pfOverlap = (float **) aligned_malloc(2 * m_nOverlapLength * sizeof(float));
+    m_pfOverlap = (float **) aligned_malloc(2 * sizeof(float *));
+    m_pfOverlap[0] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
+    m_pfOverlap[1] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
 
     //Allocate FFT and iFFT for new size
     m_pFFT_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
     m_pIFFT_cfg = kiss_fftr_alloc(m_nFFTSize, 1, 0, 0);
 
     //Allocate the FFTBins for each channel, for each ear
-    m_ppcpFilters = (kiss_fft_cpx ***) aligned_malloc(2 * m_nChannelCount * m_nFFTBins * sizeof(kiss_fft_cpx));
+    m_ppcpFilters = (kiss_fft_cpx ***) aligned_malloc(2 * sizeof(kiss_fft_cpx **));
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+        m_ppcpFilters[niEar] = (kiss_fft_cpx **) aligned_malloc(m_nChannelCount * sizeof(kiss_fft_cpx *));
+        for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
+            m_ppcpFilters[niEar][niChannel] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
+        }
+    }
 
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
 }

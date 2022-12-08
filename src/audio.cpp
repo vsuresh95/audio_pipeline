@@ -25,6 +25,7 @@ void ABAudio::loadSource() {
 void ABAudio::processBlock() {
     float **resultSample;
     
+    resultSample = (float **) aligned_malloc(2 * sizeof(float *));
     resultSample[0] = (float *) aligned_malloc(BLOCK_SIZE * sizeof(float));
     resultSample[1] = (float *) aligned_malloc(BLOCK_SIZE * sizeof(float));
 
@@ -32,21 +33,13 @@ void ABAudio::processBlock() {
     CBFormat sumBF;
     sumBF.Configure(BLOCK_SIZE, NUM_SRCS);
 
-    printf("sumBF Configure done\n");
-
     rotator.updateRotation();
     rotator.Process(&sumBF, BLOCK_SIZE);
-
-    printf("rotator Process done\n");
 
     zoomer.updateZoom();
     zoomer.Process(&sumBF, BLOCK_SIZE);
 
-    printf("zoomer Process done\n");
-
     decoder.Process(&sumBF, resultSample);
-
-    printf("decoder Process done\n");
 
     aligned_free(resultSample);
 }

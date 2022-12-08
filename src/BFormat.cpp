@@ -13,5 +13,8 @@ void CBFormat::Configure(unsigned nSampleCount, unsigned nChannels) {
 
     m_pfData = (float *) aligned_malloc(m_nSamples * m_nChannelCount * sizeof(float));
    
-    m_ppfChannels = (float **) aligned_malloc(m_nChannelCount * m_nSamples * sizeof(float));
+    m_ppfChannels = (float **) aligned_malloc(m_nChannelCount * sizeof(float *));
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
+        m_ppfChannels[niChannel] = (float *) aligned_malloc(m_nSamples * sizeof(float));
+    }
 }

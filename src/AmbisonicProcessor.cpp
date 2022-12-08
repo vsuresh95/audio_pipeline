@@ -36,11 +36,17 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_fFFTScaler = 1.f / m_nFFTSize;
 
     //Allocate buffers
-    m_pfOverlap = (float **) aligned_malloc(m_nChannelCount * m_nOverlapLength * sizeof(float));
+    m_pfOverlap = (float **) aligned_malloc(m_nChannelCount * sizeof(float *));
+    for(unsigned i = 0; i < m_nChannelCount; i++) {
+        m_pfOverlap[i] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
+    }
 
     m_pfScratchBufferA = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
 
-    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc(NORDER * m_nFFTBins * sizeof(kiss_fft_cpx));
+    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc(NORDER * sizeof(kiss_fft_cpx *));
+    for(unsigned i = 0; i < NORDER; i++) {
+        m_ppcpPsychFilters[i] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
+    }
 
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
 
@@ -58,19 +64,15 @@ void AmbisonicProcessor::updateRotation() {
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
     ShelfFilterOrder(pBFSrcDst, nSamples);
-    printf("ShelfFilterOrder done\n");
     if(m_nOrder >= 1) {
         ProcessOrder1_3D(pBFSrcDst, nSamples);
     }
-    printf("ProcessOrder1_3D done\n");
     if(m_nOrder >= 2) {
         ProcessOrder2_3D(pBFSrcDst, nSamples);
     }
-    printf("ProcessOrder2_3D done\n");
     if(m_nOrder >= 3) {
         ProcessOrder3_3D(pBFSrcDst, nSamples);
     }
-    printf("ProcessOrder3_3D done\n");
 }
 
 void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples)
@@ -259,7 +261,6 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
         memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(float));
 
         kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
-        printf("kiss_fftr done\n");
 
         // Perform the convolution in the frequency domain
         for(unsigned ni = 0; ni < m_nFFTBins; ni++)
@@ -270,11 +271,9 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
                         + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
             m_pcpScratch[ni] = cpTemp;
         }
-        printf("fir done\n");
 
         // Convert from frequency domain back to time domain
         kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
-        printf("kiss_fftri done\n");
 
         for(unsigned ni = 0; ni < m_nFFTSize; ni++)
             m_pfScratchBufferA[ni] *= m_fFFTScaler;
