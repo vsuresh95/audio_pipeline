@@ -1,7 +1,9 @@
 #ifndef ZOOMER_H
 #define ZOOMER_H
 
-class AmbisonicZoomer {
+#include <AudioBase.hpp>
+
+class AmbisonicZoomer : public AudioBase {
 public:
     unsigned m_nChannelCount;
 

@@ -1,9 +1,10 @@
 #ifndef ROTATOR_H
 #define ROTATOR_H
 
-#include "kiss_fftr.hpp"
+#include <kiss_fftr.hpp>
+#include <AudioBase.hpp>
 
-class AmbisonicProcessor {
+class AmbisonicProcessor : public AudioBase {
 public:
     unsigned m_nChannelCount;
     unsigned m_nOrder;
@@ -55,6 +56,8 @@ public:
     void ProcessOrder3_3D(CBFormat* pBFSrcDst, unsigned nSamples);
 
     void ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples);
+
+    void PrintTimeInfo(unsigned factor);
 };
 
 #endif // ROTATOR_H

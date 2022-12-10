@@ -3,21 +3,17 @@
 
 #include <stdio.h>
 
-extern "C" {
-#include <esp_accelerator.h>
-#include <esp_probe.h>
-}
-
-#include <BFormat.hpp>
 #include <AmbisonicBinauralizer.hpp>
 #include <AmbisonicProcessor.hpp>
 #include <AmbisonicZoomer.hpp>
+#include <AudioBase.hpp>
 
-class ABAudio {
+class ABAudio : public AudioBase {
 public:
     void Configure();
     void loadSource();
     void processBlock();
+    void PrintTimeInfo(unsigned factor);
     
     // decoder associated with this audio
     AmbisonicBinauralizer decoder;

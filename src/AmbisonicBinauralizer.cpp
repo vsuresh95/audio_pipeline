@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <cstring>
-#include <BFormat.hpp>
 #include <AmbisonicBinauralizer.hpp>
 
-extern "C" {
-#include <esp_accelerator.h>
-#include <esp_probe.h>
-}
-
 void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize, unsigned nChannels) {
+    Name = (char *) "BINAURALIZER";
+
     m_nChannelCount = nChannels;
 
     m_nTaps = 140;
@@ -54,7 +50,7 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
 
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
 
-    printf("[AmbisonicBinauralizer] Initializing binaur filters\n");
+    printf("[%s] Initializing binaur filters\n", Name);
 
     for(unsigned niEar = 0; niEar < 2; niEar++) {
         for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
@@ -82,8 +78,11 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
             memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
             memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
+            StartCounter();
             kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+            EndCounter(0);
 
+            StartCounter();
             for(ni = 0; ni < m_nFFTBins; ni++)
             {
                 cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
@@ -92,8 +91,11 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
                             + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
                 m_pcpScratch[ni] = cpTemp;
             }
+            EndCounter(1);
 
+            StartCounter();
             kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
+            EndCounter(2);
 
             for(ni = 0; ni < m_nFFTSize; ni++)
                 m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];
@@ -105,4 +107,14 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
             ppfDst[niEar][ni] += m_pfOverlap[niEar][ni];
         memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
+}
+
+void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM %s\n", Name);
+    printf("---------------------------------------------\n");
+    printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
+    printf("Binaur FIR\t = %lu\n", TotalTime[1]/factor);
+    printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
+    printf("\n");
 }

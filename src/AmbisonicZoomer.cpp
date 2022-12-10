@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <math.h>
-#include <BFormat.hpp>
 #include <AmbisonicZoomer.hpp>
 
-extern "C" {
-#include <esp_accelerator.h>
-#include <esp_probe.h>
-}
-
 void AmbisonicZoomer::Configure(unsigned nChannels) {
+    Name = (char *) "ZOOMER";
+
     m_nChannelCount = nChannels;
 
     m_fZoomRed = 0.f;
@@ -16,7 +12,7 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
     m_AmbEncoderFront = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
     m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
-    printf("[AmbisonicBinauralizer] Initializing binaur filters\n");
+    printf("[%s] Initializing binaur filters\n", Name);
 
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
         m_AmbEncoderFront[niChannel] = rand() % 100;

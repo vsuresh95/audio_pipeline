@@ -1,9 +1,10 @@
 #ifndef DECODER_H
 #define DECODER_H
 
-#include "kiss_fftr.hpp"
+#include <kiss_fftr.hpp>
+#include <AudioBase.hpp>
 
-class AmbisonicBinauralizer {
+class AmbisonicBinauralizer : public AudioBase {
 public:
     unsigned m_nChannelCount;
 
@@ -27,6 +28,8 @@ public:
     void Configure(unsigned nSampleRate, unsigned nBlockSize, unsigned nChannels);
     
     void Process(CBFormat *pBFSrc, audio_t **ppfDst);
+
+    void PrintTimeInfo(unsigned factor);
 };
 
 #endif // DECODER_H

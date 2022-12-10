@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <cstring>
-#include <BFormat.hpp>
 #include <AmbisonicProcessor.hpp>
 
-extern "C" {
-#include <esp_accelerator.h>
-#include <esp_probe.h>
-}
-
 void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
+    Name = (char *) "PSYCHOACOUSTIC FILTER";
+
     m_nOrder = NORDER;
     m_nChannelCount = nChannels;
 
@@ -54,7 +50,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_pFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
     m_pIFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 1, 0, 0);
 
-    printf("[AmbisonicProcessor] Initializing psycho filters\n");
+    printf("[%s] Initializing psycho filters\n", Name);
 
     for(unsigned niChannel = 0; niChannel < NORDER; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
@@ -63,7 +59,6 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
         }
     }
 }
-
 
 void AmbisonicProcessor::updateRotation() {
     m_fCosAlpha = rand() % 100;
@@ -89,13 +84,19 @@ void AmbisonicProcessor::updateRotation() {
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
     ShelfFilterOrder(pBFSrcDst, nSamples);
     if(m_nOrder >= 1) {
+        StartCounter();
         ProcessOrder1_3D(pBFSrcDst, nSamples);
+        EndCounter(3);
     }
     if(m_nOrder >= 2) {
+        StartCounter();
         ProcessOrder2_3D(pBFSrcDst, nSamples);
+        EndCounter(4);
     }
     if(m_nOrder >= 3) {
+        StartCounter();
         ProcessOrder3_3D(pBFSrcDst, nSamples);
+        EndCounter(5);
     }
 }
 
@@ -284,9 +285,12 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
         memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
         memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
+        StartCounter();
         kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
+        EndCounter(0);
 
         // Perform the convolution in the frequency domain
+        StartCounter();
         for(unsigned ni = 0; ni < m_nFFTBins; ni++)
         {
             cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
@@ -295,9 +299,12 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
                         + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
             m_pcpScratch[ni] = cpTemp;
         }
+        EndCounter(1);
 
         // Convert from frequency domain back to time domain
+        StartCounter();
         kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
+        EndCounter(2);
 
         for(unsigned ni = 0; ni < m_nFFTSize; ni++)
             m_pfScratchBufferA[ni] *= m_fFFTScaler;
@@ -310,4 +317,17 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
         
         memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
+}
+
+void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM %s\n", Name);
+    printf("---------------------------------------------\n");
+    printf("Psycho FFT\t = %lu\n", TotalTime[0]/factor);
+    printf("Psycho FIR\t = %lu\n", TotalTime[1]/factor);
+    printf("Psycho IFFT\t = %lu\n", TotalTime[2]/factor);
+    printf("Rotate O1\t = %lu\n", TotalTime[3]/factor);
+    printf("Rotate O2\t = %lu\n", TotalTime[4]/factor);
+    printf("Rotate O3\t = %lu\n", TotalTime[5]/factor);
+    printf("\n");
 }
