@@ -9,9 +9,8 @@ int main(int argc, char **argv) {
     audio.loadSource();
 
     for (int i = 0; i < numBlocks; i++) {
-        printf("[MAIN] Audio block %d done\n", i);
-
         audio.processBlock();
+        printf("[MAIN] Audio block %d done\n", i);
     }
 
     audio.PrintTimeInfo(numBlocks);

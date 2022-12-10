@@ -12,8 +12,6 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
     m_AmbEncoderFront = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
     m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
-    printf("[%s] Initializing binaur filters\n", Name);
-
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
         m_AmbEncoderFront[niChannel] = rand() % 100;
         m_AmbEncoderFront_weighted[niChannel] = rand() % 100;
