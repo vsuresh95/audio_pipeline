@@ -16,12 +16,20 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
     m_AmbEncoderFront = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
     m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
-    /// TODO: Update m_AmbEncoderFront, m_AmbEncoderFront_weighted and m_AmbFrontMic with appropriate values
+    printf("[AmbisonicBinauralizer] Initializing binaur filters\n");
+
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
+        m_AmbEncoderFront[niChannel] = rand() % 100;
+        m_AmbEncoderFront_weighted[niChannel] = rand() % 100;
+    }
 }
 
 void AmbisonicZoomer::updateZoom() {
     // Limit the zoom value to always preserve the spacial effect.
-    /// TODO: Update m_fZoom, m_fZoomRed and m_fZoomBlend with appropriate values
+    m_fZoom = rand() % 100; 
+    m_fZoomRed = rand() % 100;
+    m_fZoomBlend = rand() % 100;
+    m_AmbFrontMic = rand() % 100;
 }
 
 void AmbisonicZoomer::Process(CBFormat *pBFSrcDst, unsigned nSamples)

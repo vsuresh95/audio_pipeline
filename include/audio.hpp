@@ -25,6 +25,9 @@ public:
     AmbisonicProcessor rotator;
     // ambisonics zoomer associated with this audio
     AmbisonicZoomer zoomer;
+
+    /// Temporary BFormat file to sum up ambisonics
+    CBFormat sumBF;
 };
 
 #endif // AUDIO_H

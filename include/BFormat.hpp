@@ -1,12 +1,14 @@
 #ifndef BFORMAT_H
 #define BFORMAT_H
 
+#include <stdlib.h>
+#include <stdio.h>
+
 class CBFormat {
 public:
     unsigned m_nSamples;
     unsigned m_nDataLength;
     unsigned m_nChannelCount;
-    audio_t *m_pfData;
     audio_t **m_ppfChannels;
 
     void Configure(unsigned nSampleCount, unsigned nChannels);

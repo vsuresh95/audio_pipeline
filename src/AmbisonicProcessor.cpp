@@ -54,12 +54,36 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_pFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
     m_pIFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 1, 0, 0);
 
-    /// TODO: Update m_ppcpPsychFilters with appropriate weights
+    printf("[AmbisonicProcessor] Initializing psycho filters\n");
+
+    for(unsigned niChannel = 0; niChannel < NORDER; niChannel++) {
+        for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
+            m_ppcpPsychFilters[niChannel][niSample].r = rand() % 100;
+            m_ppcpPsychFilters[niChannel][niSample].i = rand() % 100;
+        }
+    }
 }
 
 
 void AmbisonicProcessor::updateRotation() {
-    /// TODO: Update Cos/Sin parameters
+    m_fCosAlpha = rand() % 100;
+    m_fSinAlpha = rand() % 100;
+    m_fCosBeta = rand() % 100;
+    m_fSinBeta = rand() % 100;
+    m_fCosGamma = rand() % 100;
+    m_fSinGamma = rand() % 100;
+    m_fCos2Alpha = rand() % 100;
+    m_fSin2Alpha = rand() % 100;
+    m_fCos2Beta = rand() % 100;
+    m_fSin2Beta = rand() % 100;
+    m_fCos2Gamma = rand() % 100;
+    m_fSin2Gamma = rand() % 100;
+    m_fCos3Alpha = rand() % 100;
+    m_fSin3Alpha = rand() % 100;
+    m_fCos3Beta = rand() % 100;
+    m_fSin3Beta = rand() % 100;
+    m_fCos3Gamma = rand() % 100;
+    m_fSin3Gamma = rand() % 100;
 }
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {

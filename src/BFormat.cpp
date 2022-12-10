@@ -11,10 +11,16 @@ void CBFormat::Configure(unsigned nSampleCount, unsigned nChannels) {
 
     m_nDataLength = nSampleCount * m_nChannelCount;
 
-    m_pfData = (audio_t *) aligned_malloc(m_nSamples * m_nChannelCount * sizeof(audio_t));
-   
     m_ppfChannels = (audio_t **) aligned_malloc(m_nChannelCount * sizeof(audio_t *));
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
         m_ppfChannels[niChannel] = (audio_t *) aligned_malloc(m_nSamples * sizeof(audio_t));
+    }
+
+    printf("[BFormat] Initializing sources\n");
+
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
+        for(unsigned niSample = 0; niSample < m_nSamples; niSample++) {
+            m_ppfChannels[niChannel][niSample] = rand() % 100;
+        }
     }
 }

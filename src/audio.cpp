@@ -4,17 +4,17 @@ void ABAudio::Configure() {
     /// Processor to rotate
     rotator.Configure(BLOCK_SIZE, NUM_SRCS);
 
-    printf("rotator Configure done\n");
+    printf("[Audio] rotator Configure done\n");
 
     /// Processor to zoom
     zoomer.Configure(NUM_SRCS);
 
-    printf("zoomer Configure done\n");
+    printf("[Audio] zoomer Configure done\n");
 
     /// Binauralizer as ambisonics decoder
     decoder.Configure(SAMPLERATE, BLOCK_SIZE, NUM_SRCS);
 
-    printf("decoder Configure done\n");
+    printf("[Audio] decoder Configure done\n");
 }
 
 void ABAudio::loadSource() {
@@ -29,8 +29,6 @@ void ABAudio::processBlock() {
     resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
     resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
 
-    /// Temporary BFormat file to sum up ambisonics
-    CBFormat sumBF;
     sumBF.Configure(BLOCK_SIZE, NUM_SRCS);
 
     rotator.updateRotation();

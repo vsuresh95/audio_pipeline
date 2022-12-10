@@ -9,10 +9,12 @@ int main(int argc, char **argv) {
     audio.loadSource();
 
     for (int i = 0; i < numBlocks; i++) {
-        printf("Audio block %d done\n", i);
+        printf("[Main] Audio block %d done\n", i);
 
         audio.processBlock();
     }
+
+    while(1);
 
     return 0;
 }
