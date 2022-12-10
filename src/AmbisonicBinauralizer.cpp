@@ -30,14 +30,14 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     m_fFFTScaler = 1.f / m_nFFTSize;
 
     //Allocate scratch buffers
-    m_pfScratchBufferA = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
-    m_pfScratchBufferB = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
-    m_pfScratchBufferC = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
+    m_pfScratchBufferA = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
+    m_pfScratchBufferB = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
+    m_pfScratchBufferC = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
 
     //Allocate overlap-add buffers
-    m_pfOverlap = (float **) aligned_malloc(2 * sizeof(float *));
-    m_pfOverlap[0] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
-    m_pfOverlap[1] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
+    m_pfOverlap = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
+    m_pfOverlap[0] = (audio_t *) aligned_malloc(m_nOverlapLength * sizeof(audio_t));
+    m_pfOverlap[1] = (audio_t *) aligned_malloc(m_nOverlapLength * sizeof(audio_t));
 
     //Allocate FFT and iFFT for new size
     m_pFFT_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
@@ -55,7 +55,7 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
 }
 
-void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, float **ppfDst) {
+void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
     unsigned niEar = 0;
     unsigned niChannel = 0;
     unsigned ni = 0;
@@ -65,11 +65,11 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, float **ppfDst) {
     // convolutions.
     for(niEar = 0; niEar < 2; niEar++)
     {
-        memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(float));
+        memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
         for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
         {
-            memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(float));
-            memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(float));
+            memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+            memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
             kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
 
@@ -89,9 +89,9 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, float **ppfDst) {
         }
         for(ni = 0; ni < m_nFFTSize; ni++)
             m_pfScratchBufferA[ni] *= m_fFFTScaler;
-        memcpy(ppfDst[niEar], m_pfScratchBufferA, m_nBlockSize * sizeof(float));
+        memcpy(ppfDst[niEar], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
         for(ni = 0; ni < m_nOverlapLength; ni++)
             ppfDst[niEar][ni] += m_pfOverlap[niEar][ni];
-        memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(float));
+        memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
 }

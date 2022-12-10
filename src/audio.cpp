@@ -23,11 +23,11 @@ void ABAudio::loadSource() {
 }
 
 void ABAudio::processBlock() {
-    float **resultSample;
+    audio_t **resultSample;
     
-    resultSample = (float **) aligned_malloc(2 * sizeof(float *));
-    resultSample[0] = (float *) aligned_malloc(BLOCK_SIZE * sizeof(float));
-    resultSample[1] = (float *) aligned_malloc(BLOCK_SIZE * sizeof(float));
+    resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
+    resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
+    resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
 
     /// Temporary BFormat file to sum up ambisonics
     CBFormat sumBF;

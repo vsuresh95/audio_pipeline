@@ -13,8 +13,8 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
 
     m_fZoomRed = 0.f;
 
-    m_AmbEncoderFront = (float *) aligned_malloc(m_nChannelCount * sizeof(float));
-    m_AmbEncoderFront_weighted = (float *) aligned_malloc(m_nChannelCount * sizeof(float));
+    m_AmbEncoderFront = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
+    m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
     /// TODO: Update m_AmbEncoderFront, m_AmbEncoderFront_weighted and m_AmbFrontMic with appropriate values
 }
@@ -28,7 +28,7 @@ void AmbisonicZoomer::Process(CBFormat *pBFSrcDst, unsigned nSamples)
 {
     for(unsigned niSample = 0; niSample < nSamples; niSample++)
     {
-        float fMic = 0.f;
+        audio_t fMic = 0.f;
 
         for(unsigned iChannel=0; iChannel<m_nChannelCount; iChannel++)
         {

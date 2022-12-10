@@ -6,8 +6,8 @@ public:
     unsigned m_nSamples;
     unsigned m_nDataLength;
     unsigned m_nChannelCount;
-    float *m_pfData;
-    float **m_ppfChannels;
+    audio_t *m_pfData;
+    audio_t **m_ppfChannels;
 
     void Configure(unsigned nSampleCount, unsigned nChannels);
 };

@@ -11,7 +11,7 @@ public:
     unsigned m_nTaps;
     unsigned m_nFFTSize;
     unsigned m_nFFTBins;
-    float m_fFFTScaler;
+    audio_t m_fFFTScaler;
     unsigned m_nOverlapLength;
 
     struct kiss_fftr_state *m_pFFT_cfg;
@@ -19,14 +19,14 @@ public:
     kiss_fft_cpx ***m_ppcpFilters;
     kiss_fft_cpx *m_pcpScratch;
 
-    float *m_pfScratchBufferA;
-    float *m_pfScratchBufferB;
-    float *m_pfScratchBufferC;
-    float **m_pfOverlap;
+    audio_t *m_pfScratchBufferA;
+    audio_t *m_pfScratchBufferB;
+    audio_t *m_pfScratchBufferC;
+    audio_t **m_pfOverlap;
 
     void Configure(unsigned nSampleRate, unsigned nBlockSize, unsigned nChannels);
     
-    void Process(CBFormat *pBFSrc, float **ppfDst);
+    void Process(CBFormat *pBFSrc, audio_t **ppfDst);
 };
 
 #endif // DECODER_H

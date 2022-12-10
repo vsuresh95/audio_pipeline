@@ -5,13 +5,13 @@ class AmbisonicZoomer {
 public:
     unsigned m_nChannelCount;
 
-    float *m_AmbEncoderFront;
-    float *m_AmbEncoderFront_weighted;
+    audio_t *m_AmbEncoderFront;
+    audio_t *m_AmbEncoderFront_weighted;
 
-    float m_fZoom;
-    float m_fZoomRed;
-    float m_AmbFrontMic;
-    float m_fZoomBlend;
+    audio_t m_fZoom;
+    audio_t m_fZoomRed;
+    audio_t m_AmbFrontMic;
+    audio_t m_fZoomBlend;
 
     void Configure(unsigned nChannels);
 

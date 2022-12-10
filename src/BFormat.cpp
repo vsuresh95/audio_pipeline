@@ -11,10 +11,10 @@ void CBFormat::Configure(unsigned nSampleCount, unsigned nChannels) {
 
     m_nDataLength = nSampleCount * m_nChannelCount;
 
-    m_pfData = (float *) aligned_malloc(m_nSamples * m_nChannelCount * sizeof(float));
+    m_pfData = (audio_t *) aligned_malloc(m_nSamples * m_nChannelCount * sizeof(audio_t));
    
-    m_ppfChannels = (float **) aligned_malloc(m_nChannelCount * sizeof(float *));
+    m_ppfChannels = (audio_t **) aligned_malloc(m_nChannelCount * sizeof(audio_t *));
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
-        m_ppfChannels[niChannel] = (float *) aligned_malloc(m_nSamples * sizeof(float));
+        m_ppfChannels[niChannel] = (audio_t *) aligned_malloc(m_nSamples * sizeof(audio_t));
     }
 }

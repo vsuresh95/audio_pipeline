@@ -12,8 +12,8 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_nOrder = NORDER;
     m_nChannelCount = nChannels;
 
-    m_pfTempSample = (float *) aligned_malloc(m_nChannelCount * sizeof(float));
-    memset(m_pfTempSample, 0, m_nChannelCount * sizeof(float));
+    m_pfTempSample = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
+    memset(m_pfTempSample, 0, m_nChannelCount * sizeof(audio_t));
 
     // All optimisation filters have the same number of taps so take from the first order 3D impulse response arbitrarily
     unsigned nbTaps = 101;
@@ -36,12 +36,12 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_fFFTScaler = 1.f / m_nFFTSize;
 
     //Allocate buffers
-    m_pfOverlap = (float **) aligned_malloc(m_nChannelCount * sizeof(float *));
+    m_pfOverlap = (audio_t **) aligned_malloc(m_nChannelCount * sizeof(audio_t *));
     for(unsigned i = 0; i < m_nChannelCount; i++) {
-        m_pfOverlap[i] = (float *) aligned_malloc(m_nOverlapLength * sizeof(float));
+        m_pfOverlap[i] = (audio_t *) aligned_malloc(m_nOverlapLength * sizeof(audio_t));
     }
 
-    m_pfScratchBufferA = (float *) aligned_malloc(m_nFFTSize * sizeof(float));
+    m_pfScratchBufferA = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
 
     m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc(NORDER * sizeof(kiss_fft_cpx *));
     for(unsigned i = 0; i < NORDER; i++) {
@@ -115,7 +115,7 @@ void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples
 
 void AmbisonicProcessor::ProcessOrder2_3D(CBFormat* pBFSrcDst, unsigned nSamples)
 {
-    float fSqrt3 = sqrt(3.f);
+    audio_t fSqrt3 = sqrt(3.f);
 
     for(unsigned niSample = 0; niSample < nSamples; niSample++)
     {
@@ -168,9 +168,9 @@ void AmbisonicProcessor::ProcessOrder2_3D(CBFormat* pBFSrcDst, unsigned nSamples
 void AmbisonicProcessor::ProcessOrder3_3D(CBFormat* pBFSrcDst, unsigned nSamples)
 {
     /* (should move these somewhere that does recompute each time) */
-    float fSqrt3_2 = sqrt(3.f/2.f);
-    float fSqrt15 = sqrt(15.f);
-    float fSqrt5_2 = sqrt(5.f/2.f);
+    audio_t fSqrt3_2 = sqrt(3.f/2.f);
+    audio_t fSqrt15 = sqrt(15.f);
+    audio_t fSqrt5_2 = sqrt(5.f/2.f);
 
     for(unsigned niSample = 0; niSample < nSamples; niSample++)
     {
@@ -251,14 +251,14 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     // All  channels are filtered using linear phase FIR filters.
     // In the case of the 0th order signal (W channel) this takes the form of a delay
     // For all other channels shelf filters are used
-    memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(float));
+    memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
 
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
 
-        memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(float));
-        memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(float));
+        memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+        memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
         kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
 
@@ -278,12 +278,12 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
         for(unsigned ni = 0; ni < m_nFFTSize; ni++)
             m_pfScratchBufferA[ni] *= m_fFFTScaler;
 
-        memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(float));
+        memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
 
         for(unsigned ni = 0; ni < m_nOverlapLength; ni++) {
             pBFSrcDst->m_ppfChannels[niChannel][ni] += m_pfOverlap[niChannel][ni];
         }
         
-        memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(float));
+        memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
 }

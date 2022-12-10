@@ -6,7 +6,7 @@
 #ifdef FIXED_POINT
 #define kiss_fft_scalar int32_t
 #else
-#define kiss_fft_scalar float
+#define kiss_fft_scalar audio_t
 #endif
 
 #define MAXFACTORS 32

@@ -8,41 +8,41 @@ public:
     unsigned m_nChannelCount;
     unsigned m_nOrder;
 
-    float* m_pfTempSample;
+    audio_t* m_pfTempSample;
 
     kiss_fftr_cfg m_pFFT_psych_cfg;
     kiss_fftr_cfg m_pIFFT_psych_cfg;
 
-    float* m_pfScratchBufferA;
-    float** m_pfOverlap;
+    audio_t* m_pfScratchBufferA;
+    audio_t** m_pfOverlap;
     unsigned m_nFFTSize;
     unsigned m_nBlockSize;
     unsigned m_nTaps;
     unsigned m_nOverlapLength;
     unsigned m_nFFTBins;
-    float m_fFFTScaler;
+    audio_t m_fFFTScaler;
 
     kiss_fft_cpx** m_ppcpPsychFilters;
     kiss_fft_cpx* m_pcpScratch;
 
-    float m_fCosAlpha;
-    float m_fSinAlpha;
-    float m_fCosBeta;
-    float m_fSinBeta;
-    float m_fCosGamma;
-    float m_fSinGamma;
-    float m_fCos2Alpha;
-    float m_fSin2Alpha;
-    float m_fCos2Beta;
-    float m_fSin2Beta;
-    float m_fCos2Gamma;
-    float m_fSin2Gamma;
-    float m_fCos3Alpha;
-    float m_fSin3Alpha;
-    float m_fCos3Beta;
-    float m_fSin3Beta;
-    float m_fCos3Gamma;
-    float m_fSin3Gamma;
+    audio_t m_fCosAlpha;
+    audio_t m_fSinAlpha;
+    audio_t m_fCosBeta;
+    audio_t m_fSinBeta;
+    audio_t m_fCosGamma;
+    audio_t m_fSinGamma;
+    audio_t m_fCos2Alpha;
+    audio_t m_fSin2Alpha;
+    audio_t m_fCos2Beta;
+    audio_t m_fSin2Beta;
+    audio_t m_fCos2Gamma;
+    audio_t m_fSin2Gamma;
+    audio_t m_fCos3Alpha;
+    audio_t m_fSin3Alpha;
+    audio_t m_fCos3Beta;
+    audio_t m_fSin3Beta;
+    audio_t m_fCos3Gamma;
+    audio_t m_fSin3Gamma;
 
     void Configure(unsigned nBlockSize, unsigned nChannels);
 
