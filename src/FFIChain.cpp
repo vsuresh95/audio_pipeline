@@ -75,9 +75,9 @@ void FFIChain::ConfigureAcc() {
 	SetSpandexConfig(IS_ESP, COH_MODE);
 	SetCohMode(IS_ESP, COH_MODE);
 
-	FFTInst.ProbeAcc(2);
-	FIRInst.ProbeAcc(1);
-	IFFTInst.ProbeAcc(3);
+	FFTInst.ProbeAcc(0);
+	FIRInst.ProbeAcc(0);
+	IFFTInst.ProbeAcc(1);
 
 	FFTInst.logn_samples = logn_samples;
 	FIRInst.logn_samples = logn_samples;
