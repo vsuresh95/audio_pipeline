@@ -281,10 +281,11 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
-        printf("Entered Channel %d\n", niChannel);
 
         if (DO_NP_CHAIN_OFFLOAD) {
-            FFIChainInst->NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], niChannel);
+            StartCounter();
+            FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], niChannel);
+            EndCounter(0);
         } else {
             memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
             memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
@@ -328,9 +329,13 @@ void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    printf("Psycho FFT\t = %lu\n", TotalTime[0]/factor);
-    printf("Psycho FIR\t = %lu\n", TotalTime[1]/factor);
-    printf("Psycho IFFT\t = %lu\n", TotalTime[2]/factor);
+    if (DO_NP_CHAIN_OFFLOAD) {
+        printf("Psycho Chain\t = %lu\n", TotalTime[0]/factor);
+    } else {
+        printf("Psycho FFT\t = %lu\n", TotalTime[0]/factor);
+        printf("Psycho FIR\t = %lu\n", TotalTime[1]/factor);
+        printf("Psycho IFFT\t = %lu\n", TotalTime[2]/factor);
+    }
     printf("Rotate O1\t = %lu\n", TotalTime[3]/factor);
     printf("Rotate O2\t = %lu\n", TotalTime[4]/factor);
     printf("Rotate O3\t = %lu\n", TotalTime[5]/factor);

@@ -60,7 +60,7 @@ public:
 
     void PrintTimeInfo(unsigned factor);
 
-    FFIChain *FFIChainInst;
+    FFIChain FFIChainInst;
 };
 
 #endif // ROTATOR_H

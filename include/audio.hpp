@@ -25,7 +25,7 @@ public:
     /// Temporary BFormat file to sum up ambisonics
     CBFormat sumBF;
 
-    FFIChain *FFIChainInst;
+    FFIChain FFIChainInst;
 };
 
 #endif // AUDIO_H

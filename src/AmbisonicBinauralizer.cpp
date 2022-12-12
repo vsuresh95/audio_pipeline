@@ -76,7 +76,9 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
         for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
         {
             if (DO_NP_CHAIN_OFFLOAD) {
-                FFIChainInst->NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], niChannel);
+                StartCounter();
+                FFIChainInst.NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], niChannel);
+                EndCounter(0);
             } else {
                 memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
                 memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
@@ -117,8 +119,12 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
-    printf("Binaur FIR\t = %lu\n", TotalTime[1]/factor);
-    printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
+    if (DO_NP_CHAIN_OFFLOAD) {
+        printf("Binaur Chain\t = %lu\n", TotalTime[0]/factor);
+    } else {
+        printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
+        printf("Binaur FIR\t = %lu\n", TotalTime[1]/factor);
+        printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
+    }
     printf("\n");
 }

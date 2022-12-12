@@ -32,7 +32,7 @@ public:
 
     void PrintTimeInfo(unsigned factor);
 
-    FFIChain *FFIChainInst;
+    FFIChain FFIChainInst;
 };
 
 #endif // DECODER_H

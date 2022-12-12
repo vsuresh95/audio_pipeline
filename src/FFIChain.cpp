@@ -80,12 +80,26 @@ void FFIChain::ConfigureAcc() {
 	IFFTInst.ProbeAcc(1);
 
 	FFTInst.logn_samples = logn_samples;
-	FIRInst.logn_samples = logn_samples;
-	IFFTInst.logn_samples = logn_samples;
-
 	FFTInst.ptable = ptable;
+    FFTInst.mem_size = mem_size;
+    FFTInst.acc_size = acc_size;
+    FFTInst.SpandexReg = SpandexConfig.spandex_reg;
+    FFTInst.CoherenceMode = CoherenceMode;
+
+	FIRInst.logn_samples = logn_samples;
 	FIRInst.ptable = ptable;
+    FIRInst.mem_size = mem_size;
+    FIRInst.acc_size = acc_size;
+    FIRInst.SpandexReg = SpandexConfig.spandex_reg;
+    FIRInst.CoherenceMode = CoherenceMode;
+	
+	IFFTInst.logn_samples = logn_samples;
 	IFFTInst.ptable = ptable;
+    IFFTInst.mem_size = mem_size;
+    IFFTInst.acc_size = acc_size;
+    IFFTInst.SpandexReg = SpandexConfig.spandex_reg;
+    IFFTInst.CoherenceMode = CoherenceMode;
+	IFFTInst.inverse = 1;
 
 	FFTInst.ConfigureAcc();
 	FIRInst.ConfigureAcc();
