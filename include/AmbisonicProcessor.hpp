@@ -3,6 +3,7 @@
 
 #include <kiss_fftr.hpp>
 #include <AudioBase.hpp>
+#include <FFIChain.hpp>
 
 class AmbisonicProcessor : public AudioBase {
 public:
@@ -58,6 +59,8 @@ public:
     void ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples);
 
     void PrintTimeInfo(unsigned factor);
+
+    FFIChain *FFIChainInst;
 };
 
 #endif // ROTATOR_H

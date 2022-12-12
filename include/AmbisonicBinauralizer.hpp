@@ -3,6 +3,7 @@
 
 #include <kiss_fftr.hpp>
 #include <AudioBase.hpp>
+#include <FFIChain.hpp>
 
 class AmbisonicBinauralizer : public AudioBase {
 public:
@@ -30,6 +31,8 @@ public:
     void Process(CBFormat *pBFSrc, audio_t **ppfDst);
 
     void PrintTimeInfo(unsigned factor);
+
+    FFIChain *FFIChainInst;
 };
 
 #endif // DECODER_H

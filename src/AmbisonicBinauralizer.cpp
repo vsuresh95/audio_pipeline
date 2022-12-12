@@ -75,27 +75,31 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
         memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
         for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
         {
-            memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-            memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+            if (DO_NP_CHAIN_OFFLOAD) {
+                FFIChainInst->NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], niChannel);
+            } else {
+                memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+                memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
-            StartCounter();
-            kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
-            EndCounter(0);
+                StartCounter();
+                kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+                EndCounter(0);
 
-            StartCounter();
-            for(ni = 0; ni < m_nFFTBins; ni++)
-            {
-                cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
-                            - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
-                cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
-                            + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
-                m_pcpScratch[ni] = cpTemp;
+                StartCounter();
+                for(ni = 0; ni < m_nFFTBins; ni++)
+                {
+                    cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
+                                - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
+                    cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
+                                + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
+                    m_pcpScratch[ni] = cpTemp;
+                }
+                EndCounter(1);
+
+                StartCounter();
+                kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
+                EndCounter(2);
             }
-            EndCounter(1);
-
-            StartCounter();
-            kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
-            EndCounter(2);
 
             for(ni = 0; ni < m_nFFTSize; ni++)
                 m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];

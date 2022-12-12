@@ -6,6 +6,7 @@ int main(int argc, char **argv) {
     ABAudio audio;
     audio.Configure();
 
+    printf("Starting Processing\n");
     audio.loadSource();
 
     for (int i = 0; i < numBlocks; i++) {

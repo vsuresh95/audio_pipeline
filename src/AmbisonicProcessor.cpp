@@ -281,30 +281,35 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
+        printf("Entered Channel %d\n", niChannel);
 
-        memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-        memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+        if (DO_NP_CHAIN_OFFLOAD) {
+            FFIChainInst->NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], niChannel);
+        } else {
+            memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+            memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
-        StartCounter();
-        kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
-        EndCounter(0);
+            StartCounter();
+            kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
+            EndCounter(0);
 
-        // Perform the convolution in the frequency domain
-        StartCounter();
-        for(unsigned ni = 0; ni < m_nFFTBins; ni++)
-        {
-            cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
-                        - m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].i;
-            cpTemp.i = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].i
-                        + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
-            m_pcpScratch[ni] = cpTemp;
+            // Perform the convolution in the frequency domain
+            StartCounter();
+            for(unsigned ni = 0; ni < m_nFFTBins; ni++)
+            {
+                cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
+                            - m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].i;
+                cpTemp.i = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].i
+                            + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
+                m_pcpScratch[ni] = cpTemp;
+            }
+            EndCounter(1);
+
+            // Convert from frequency domain back to time domain
+            StartCounter();
+            kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
+            EndCounter(2);
         }
-        EndCounter(1);
-
-        // Convert from frequency domain back to time domain
-        StartCounter();
-        kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
-        EndCounter(2);
 
         for(unsigned ni = 0; ni < m_nFFTSize; ni++)
             m_pfScratchBufferA[ni] *= m_fFFTScaler;
