@@ -284,7 +284,7 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
 
         if (DO_NP_CHAIN_OFFLOAD) {
             StartCounter();
-            FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], niChannel);
+            FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);
             EndCounter(0);
         } else {
             memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));

@@ -30,7 +30,6 @@ public:
     unsigned num_samples;
 
     audio_t *mem;
-    audio_t *fxp_filters;
     unsigned **ptable;
 
     unsigned in_len;
@@ -59,13 +58,13 @@ public:
 
     void InitParams();
     void ConfigureAcc();
-    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, unsigned CurChannel);
+    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
 
     // void PipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
 
     void InitData(CBFormat* pBFSrcDst, unsigned niChannel);
     void InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters);
-    void ReadOutput(CBFormat* pBFSrcDst, unsigned niChannel);
+    void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsigned niChannel);
 };
 
 #endif // FFICHAIN_H

@@ -38,6 +38,9 @@ static inline int64_t read_mem (void* dst)
 void FFIChain::InitParams() {
     num_samples = 1 << logn_samples;
 
+	printf("logn_samples = %d\n", logn_samples);
+	printf("num_samples = %d\n", num_samples);
+
 	in_len = 2 * num_samples;
 	out_len = 2 * num_samples;
 	in_size = in_len * sizeof(audio_t);
@@ -48,6 +51,9 @@ void FFIChain::InitParams() {
 
     acc_size = mem_size;
     acc_offset = out_offset + out_len + SYNC_VAR_SIZE;
+
+	printf("acc_size = %d\n", acc_size);
+	printf("acc_offset = %d\n", acc_offset);
 
     mem_size *= NUM_DEVICES+5;
 
@@ -64,8 +70,9 @@ void FFIChain::ConfigureAcc() {
 
 	// Allocate memory pointers
 	mem = (audio_t *) aligned_malloc(mem_size);
-	fxp_filters = (audio_t *) aligned_malloc((out_len + 2) * sizeof(audio_t));
     sm_sync = (volatile audio_t*) mem;
+
+	printf("mem = %p\n", mem);
 
 	// Allocate and populate page table
 	ptable = (unsigned **) aligned_malloc(NCHUNK(mem_size) * sizeof(unsigned *));
@@ -124,33 +131,30 @@ void FFIChain::ConfigureAcc() {
     printf("StartAcc done\n");
 }
 
-void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, unsigned CurChannel) {
+void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {
 	// Wait for FFT (consumer) to be ready
-	if (sm_sync[ConsRdyFlag] == 1) {
-		sm_sync[ConsRdyFlag] = 0;
-		// Write input data for FFT
-		InitData(pBFSrcDst, CurChannel);
-		// Inform FFT (consumer)
-		sm_sync[ConsVldFlag] = 1;
-	}
+	while (sm_sync[ConsRdyFlag] != 1);
+	sm_sync[ConsRdyFlag] = 0;
+	// Write input data for FFT
+	InitData(pBFSrcDst, CurChannel);
+	// Inform FFT (consumer)
+	sm_sync[ConsVldFlag] = 1;
 
 	// Wait for FIR (consumer) to be ready
-	if (sm_sync[FltRdyFlag] == 1) {
-		sm_sync[FltRdyFlag] = 0;
-		// Write input data for filters
-		InitFilters(pBFSrcDst, m_Filters);
-		// Inform FIR (consumer)
-		sm_sync[FltVldFlag] = 1;
-	}
+	while (sm_sync[FltRdyFlag] != 1);
+	sm_sync[FltRdyFlag] = 0;
+	// Write input data for filters
+	InitFilters(pBFSrcDst, m_Filters);
+	// Inform FIR (consumer)
+	sm_sync[FltVldFlag] = 1;
 
 	// Wait for IFFT (producer) to send output
-	if (sm_sync[ProdVldFlag] == 1) {
-		sm_sync[ProdVldFlag] = 0;
-		// Read back output
-		ReadOutput(pBFSrcDst, CurChannel);
-		// Inform IFFT (producer)
-		sm_sync[ProdRdyFlag] = 1;
-	}
+	while (sm_sync[ProdVldFlag] != 1);
+	sm_sync[ProdVldFlag] = 0;
+	// Read back output
+	ReadOutput(pBFSrcDst, m_pfScratchBufferA, CurChannel);
+	// Inform IFFT (producer)
+	sm_sync[ProdRdyFlag] = 1;
 }
 
 // void FFIChain::PipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters) {
@@ -198,7 +202,7 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 // }
 
 void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
-	int InitLength =  2 * (pBFSrcDst->m_nSamples);
+	int InitLength = 2 * (pBFSrcDst->m_nSamples);
 	int niChannel = pBFSrcDst->m_nChannelCount - InitChannel;
 	spandex_token_t CoalescedData;
 	audio_t* dst;
@@ -215,7 +219,7 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
 }
 
 void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
-	int InitLength= 2 * (pBFSrcDst->m_nSamples + 1);
+	int InitLength = 2 * (pBFSrcDst->m_nSamples + 1);
 	spandex_token_t CoalescedData;
 	audio_t* dst;
 
@@ -230,8 +234,8 @@ void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 	}
 }
 
-void FFIChain::ReadOutput(CBFormat* pBFSrcDst, unsigned ReadChannel) {
-	int ReadLength=  2 * (pBFSrcDst->m_nSamples);
+void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsigned ReadChannel) {
+	int ReadLength =  2 * (pBFSrcDst->m_nSamples);
 	int niChannel = pBFSrcDst->m_nChannelCount - ReadChannel;
 	spandex_token_t CoalescedData;
 	audio_t* dst;
@@ -242,8 +246,8 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, unsigned ReadChannel) {
 	{
 		CoalescedData.value_64 = read_mem((void *) dst);
 
-		pBFSrcDst->m_ppfChannels[niChannel][niSample] = CoalescedData.value_32_1;
-		pBFSrcDst->m_ppfChannels[niChannel][niSample+1] = CoalescedData.value_32_2;
+		m_pfScratchBufferA[niSample] = CoalescedData.value_32_1;
+		m_pfScratchBufferA[niSample+1] = CoalescedData.value_32_2;
 	}
 }
 

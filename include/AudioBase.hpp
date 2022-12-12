@@ -22,6 +22,7 @@ public:
 
     void StartCounter();
     void EndCounter(unsigned Index);
+    unsigned log2(unsigned product);
 };
 
 #endif // AUDIOBASE_H

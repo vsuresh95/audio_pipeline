@@ -19,8 +19,10 @@ void ABAudio::Configure() {
     printf("[%s] decoder Configure done\n", Name);
 
     if (DO_NP_CHAIN_OFFLOAD) {
-        FFIChainInst.logn_samples = rotator.m_nFFTSize;
+        FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
+
+        printf("FFIChainInst.logn_samples = %d\n", FFIChainInst.logn_samples);
 
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;

@@ -34,3 +34,14 @@ void AudioBase::EndCounter(unsigned Index) {
 
     TotalTime[Index] += EndTime - StartTime;
 }
+
+unsigned AudioBase::log2(unsigned product) {
+	unsigned exp = 0;
+
+	while (product > 1) {
+		exp++;
+		product /= 2;
+	}
+
+	return exp;
+}
