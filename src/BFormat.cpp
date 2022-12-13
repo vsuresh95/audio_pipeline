@@ -15,10 +15,4 @@ void CBFormat::Configure(unsigned nSampleCount, unsigned nChannels) {
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
         m_ppfChannels[niChannel] = (audio_t *) aligned_malloc(m_nSamples * sizeof(audio_t));
     }
-
-    for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
-        for(unsigned niSample = 0; niSample < m_nSamples; niSample++) {
-            m_ppfChannels[niChannel][niSample] = rand() % 100;
-        }
-    }
 }

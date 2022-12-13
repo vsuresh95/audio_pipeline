@@ -26,6 +26,8 @@ public:
     CBFormat sumBF;
 
     FFIChain FFIChainInst;
+
+    audio_t **resultSample;
 };
 
 #endif // AUDIO_H

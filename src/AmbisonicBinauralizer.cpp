@@ -74,8 +74,12 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
     {
         memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
         for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
-        {
-            if (DO_NP_CHAIN_OFFLOAD) {
+        {            
+            if (DO_CHAIN_OFFLOAD) {
+                StartCounter();
+                FFIChainInst.RegularProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
+                EndCounter(0);
+            } else if (DO_NP_CHAIN_OFFLOAD) {
                 StartCounter();
                 FFIChainInst.NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
                 EndCounter(0);

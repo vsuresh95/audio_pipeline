@@ -17,10 +17,25 @@ void ABAudio::Configure() {
     decoder.Configure(SAMPLERATE, BLOCK_SIZE, NUM_SRCS);
 
     printf("[%s] decoder Configure done\n", Name);
+    
+    resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
+    resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
+    resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
 
-    if (DO_NP_CHAIN_OFFLOAD) {
+    sumBF.Configure(BLOCK_SIZE, NUM_SRCS);
+
+    if (DO_CHAIN_OFFLOAD) {
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
+
+        printf("FFIChainInst.logn_samples = %d\n", FFIChainInst.logn_samples);
+
+        rotator.FFIChainInst = FFIChainInst;
+        decoder.FFIChainInst = FFIChainInst;
+    } else if (DO_NP_CHAIN_OFFLOAD) {
+        FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
+        FFIChainInst.ConfigureAcc();
+        FFIChainInst.StartAcc();
 
         printf("FFIChainInst.logn_samples = %d\n", FFIChainInst.logn_samples);
 
@@ -35,13 +50,11 @@ void ABAudio::loadSource() {
 }
 
 void ABAudio::processBlock() {
-    audio_t **resultSample;
-    
-    resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
-    resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-    resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-
-    sumBF.Configure(BLOCK_SIZE, NUM_SRCS);
+    for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
+        for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
+            sumBF.m_ppfChannels[niChannel][niSample] = rand() % 100;
+        }
+    }
 
     StartCounter();
     rotator.updateRotation();

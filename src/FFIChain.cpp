@@ -112,8 +112,6 @@ void FFIChain::ConfigureAcc() {
 	FIRInst.ConfigureAcc();
 	IFFTInst.ConfigureAcc();
 
-    printf("ConfigureAcc done\n");
-
 	// Start all accelerators - but keep them halted
 	for (unsigned ChainID = 0; ChainID < 4; ChainID++) {
 		sm_sync[ChainID*acc_offset + VALID_FLAG_OFFSET] = 0;
@@ -124,11 +122,32 @@ void FFIChain::ConfigureAcc() {
 	sm_sync[acc_offset + FLT_VALID_FLAG_OFFSET] = 0;
 	sm_sync[acc_offset + FLT_READY_FLAG_OFFSET] = 1;
 
+    printf("ConfigureAcc done\n");
+}
+
+void FFIChain::StartAcc() {
 	FFTInst.StartAcc();
 	FIRInst.StartAcc();
 	IFFTInst.StartAcc();
 
     printf("StartAcc done\n");
+}
+
+void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {
+	// Write input data for FFT
+	InitData(pBFSrcDst, CurChannel);
+	// Write input data for filters
+	InitFilters(pBFSrcDst, m_Filters);
+
+	FFTInst.StartAcc();
+	FFTInst.TerminateAcc();
+	FIRInst.StartAcc();
+	FIRInst.TerminateAcc();
+	IFFTInst.StartAcc();
+	IFFTInst.TerminateAcc();
+
+	// Read back output
+	ReadOutput(pBFSrcDst, m_pfScratchBufferA, CurChannel);
 }
 
 void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {

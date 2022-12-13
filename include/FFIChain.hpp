@@ -58,8 +58,10 @@ public:
 
     void InitParams();
     void ConfigureAcc();
-    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
+    void StartAcc();
 
+    void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
+    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
     // void PipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
 
     void InitData(CBFormat* pBFSrcDst, unsigned niChannel);

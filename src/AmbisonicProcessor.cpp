@@ -282,7 +282,11 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
 
-        if (DO_NP_CHAIN_OFFLOAD) {
+        if (DO_CHAIN_OFFLOAD) {
+            StartCounter();
+            FFIChainInst.RegularProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);
+            EndCounter(0);
+        } else if (DO_NP_CHAIN_OFFLOAD) {
             StartCounter();
             FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);
             EndCounter(0);
