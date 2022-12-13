@@ -228,10 +228,12 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
 
 	dst = mem + SYNC_VAR_SIZE;
 
+	// printf("Init data start %d\n", InitChannel);
+
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, dst+=2)
 	{
-		CoalescedData.value_32_1 = pBFSrcDst->m_ppfChannels[niChannel][niSample];
-		CoalescedData.value_32_2 = pBFSrcDst->m_ppfChannels[niChannel][niSample+1];
+		CoalescedData.value_32_1 = FLOAT_TO_FIXED_WRAP(pBFSrcDst->m_ppfChannels[niChannel][niSample], AUDIO_FX_IL);
+		CoalescedData.value_32_2 = FLOAT_TO_FIXED_WRAP(pBFSrcDst->m_ppfChannels[niChannel][niSample+1], AUDIO_FX_IL);
 
 		write_mem((void *) dst, CoalescedData.value_64);
 	}
@@ -244,10 +246,12 @@ void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 
 	dst = mem + (5 * acc_offset) + SYNC_VAR_SIZE;
 
+	// printf("Init Filters start\n");
+
 	for (unsigned niSample = 0; niSample < InitLength; niSample++, dst+=2)
 	{
-		CoalescedData.value_32_1 = m_Filters[niSample].r;
-		CoalescedData.value_32_2 = m_Filters[niSample].i;
+		CoalescedData.value_32_1 = FLOAT_TO_FIXED_WRAP(m_Filters[niSample].r, AUDIO_FX_IL);
+		CoalescedData.value_32_2 = FLOAT_TO_FIXED_WRAP(m_Filters[niSample].i, AUDIO_FX_IL);
 
 		write_mem((void *) dst, CoalescedData.value_64);
 	}
@@ -261,12 +265,14 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsi
 
 	dst = mem + (NUM_DEVICES * acc_offset) + SYNC_VAR_SIZE;
 
+	// printf("Read Output start %d\n", ReadChannel);
+
 	for (unsigned niSample = 0; niSample < ReadLength; niSample++, dst+=2)
 	{
 		CoalescedData.value_64 = read_mem((void *) dst);
 
-		m_pfScratchBufferA[niSample] = CoalescedData.value_32_1;
-		m_pfScratchBufferA[niSample+1] = CoalescedData.value_32_2;
+		m_pfScratchBufferA[niSample] = FIXED_TO_FLOAT_WRAP(CoalescedData.value_32_1, AUDIO_FX_IL);
+		m_pfScratchBufferA[niSample+1] = FIXED_TO_FLOAT_WRAP(CoalescedData.value_32_2, AUDIO_FX_IL);
 	}
 }
 
