@@ -39,8 +39,8 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
 
     m_pfScratchBufferA = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
 
-    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc(NORDER * sizeof(kiss_fft_cpx *));
-    for(unsigned i = 0; i < NORDER; i++) {
+    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc((NORDER+1) * sizeof(kiss_fft_cpx *));
+    for(unsigned i = 0; i < NORDER+1; i++) {
         m_ppcpPsychFilters[i] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
     }
 
@@ -52,7 +52,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
 
     printf("[%s] Initializing psycho filters\n", Name);
 
-    for(unsigned niChannel = 0; niChannel < NORDER; niChannel++) {
+    for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
             m_ppcpPsychFilters[niChannel][niSample].r = rand() % 100;
             m_ppcpPsychFilters[niChannel][niSample].i = rand() % 100;
