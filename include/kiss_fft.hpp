@@ -2,6 +2,7 @@
 #define KISS_FFT_H
 
 #include <math.h>
+#include <data_type.hpp>
 
 #ifdef FIXED_POINT
 #define kiss_fft_scalar int32_t
