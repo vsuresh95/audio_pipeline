@@ -43,11 +43,11 @@ void FFIChain::InitParams() {
 
 	in_len = 2 * num_samples;
 	out_len = 2 * num_samples;
-	in_size = in_len * sizeof(audio_t);
-	out_size = out_len * sizeof(audio_t);
+	in_size = in_len * sizeof(device_t);
+	out_size = out_len * sizeof(device_t);
 
 	out_offset  = 0;
-	mem_size = (out_offset * sizeof(audio_t)) + out_size + (SYNC_VAR_SIZE * sizeof(audio_t));
+	mem_size = (out_offset * sizeof(device_t)) + out_size + (SYNC_VAR_SIZE * sizeof(device_t));
 
     acc_size = mem_size;
     acc_offset = out_offset + out_len + SYNC_VAR_SIZE;
@@ -69,15 +69,15 @@ void FFIChain::ConfigureAcc() {
 	InitParams();
 
 	// Allocate memory pointers
-	mem = (audio_t *) aligned_malloc(mem_size);
-    sm_sync = (volatile audio_t*) mem;
+	mem = (device_t *) aligned_malloc(mem_size);
+    sm_sync = (volatile device_t*) mem;
 
 	printf("mem = %p\n", mem);
 
 	// Allocate and populate page table
 	ptable = (unsigned **) aligned_malloc(NCHUNK(mem_size) * sizeof(unsigned *));
 	for (unsigned i = 0; i < NCHUNK(mem_size); i++)
-		ptable[i] = (unsigned *) &mem[i * (CHUNK_SIZE / sizeof(audio_t))];
+		ptable[i] = (unsigned *) &mem[i * (CHUNK_SIZE / sizeof(device_t))];
 
 	SetSpandexConfig(IS_ESP, COH_MODE);
 	SetCohMode(IS_ESP, COH_MODE);
@@ -224,7 +224,7 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
 	int InitLength = 2 * (pBFSrcDst->m_nSamples);
 	int niChannel = pBFSrcDst->m_nChannelCount - InitChannel;
 	spandex_token_t CoalescedData;
-	audio_t* dst;
+	device_t* dst;
 
 	dst = mem + SYNC_VAR_SIZE;
 
@@ -240,7 +240,7 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
 void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 	int InitLength = 2 * (pBFSrcDst->m_nSamples + 1);
 	spandex_token_t CoalescedData;
-	audio_t* dst;
+	device_t* dst;
 
 	dst = mem + (5 * acc_offset) + SYNC_VAR_SIZE;
 
@@ -257,7 +257,7 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsi
 	int ReadLength =  2 * (pBFSrcDst->m_nSamples);
 	int niChannel = pBFSrcDst->m_nChannelCount - ReadChannel;
 	spandex_token_t CoalescedData;
-	audio_t* dst;
+	device_t* dst;
 
 	dst = mem + (NUM_DEVICES * acc_offset) + SYNC_VAR_SIZE;
 

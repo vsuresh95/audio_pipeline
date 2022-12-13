@@ -29,7 +29,7 @@ public:
     unsigned logn_samples;
     unsigned num_samples;
 
-    audio_t *mem;
+    device_t*mem;
     unsigned **ptable;
 
     unsigned in_len;
@@ -48,7 +48,7 @@ public:
 	unsigned ProdRdyFlag;
 	unsigned ProdVldFlag;
      
-    volatile audio_t* sm_sync;
+    volatile device_t* sm_sync;
 
     spandex_config_t SpandexConfig;
     unsigned CoherenceMode;

@@ -69,8 +69,6 @@ void ABAudio::processBlock() {
     StartCounter();
     decoder.Process(&sumBF, resultSample);
     EndCounter(2);
-
-    aligned_free(resultSample);
 }
 
 void ABAudio::PrintTimeInfo(unsigned factor) {
