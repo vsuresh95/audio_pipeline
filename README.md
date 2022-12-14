@@ -1,16 +1,18 @@
 # Audio Pipeline
 
-Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Reality testbed. The audio pipeline is responsible for both recording and playing back spatialized audio for XR.
+Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Reality testbed. The audio pipeline is responsible for both recording and playing back spatialized audio for XR. This is a simplified bare metal version of the original app.
 
-# Setup Instructions
+## Setup Instructions
 
-This repo is included as a submodule here: [ESP](https://github.com/vsuresh95/esp).
+This repo is included as a submodule of [ESP](https://github.com/vsuresh95/esp).
 
 Or you could clone this repo standalone using the following command:
 
-`git clone https://github.com/ILLIXR/audio_pipeline.git`
+`git clone git@github.com:vsuresh95/audio_pipeline.git`
 
-# Usage
+The build commands for audio-pipeline are defined in `<ESP_ROOT>/utils/make/audio_pipeline.mk` and described below.
+
+## Usage
 All commands need to be run from the build folder in ESP:
 ```
 cd socs/<FPGA Board Folder>
@@ -31,6 +33,11 @@ To run the audio-pipeline in ESP using FPGA:
 make fpga-program fpga-run-audio-pipeline
 ```
 
+To clean:
+```
+make audio-pipeline-clean
+```
+
 ## Custom options for make
 - `NUM_BLOCKS`: Number of audio blocks (16)
 - `BLOCK_SIZE`: Number of samples in each audio (1024)
@@ -42,8 +49,3 @@ make fpga-program fpga-run-audio-pipeline
 - `DO_CHAIN_OFFLOAD`: Offload FFT-FIR-IFFT chain to accelerators, with regular invocation (0)
 - `DO_NP_CHAIN_OFFLOAD`: Offload FFT-FIR-IFFT chain to accelerators, with SM invocation (0)
 - `USE_INT`: Use int type for all data, or float for CPU data and fixed point for accelerators (1)
-
-## Clean
-```
-make audio-pipeline-clean
-```
