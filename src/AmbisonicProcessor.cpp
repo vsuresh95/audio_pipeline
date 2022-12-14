@@ -8,50 +8,63 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_nOrder = NORDER;
     m_nChannelCount = nChannels;
 
-    m_pfTempSample = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
-    memset(m_pfTempSample, 0, m_nChannelCount * sizeof(audio_t));
-
-    // All optimisation filters have the same number of taps so take from the first order 3D impulse response arbitrarily
+    // Hard-coded based on observations from Linux app.
     unsigned nbTaps = 101;
 
     m_nBlockSize = nBlockSize;
     m_nTaps = nbTaps;
 
-    //What will the overlap size be?
+    // What will the overlap size be?
     m_nOverlapLength = m_nBlockSize < m_nTaps ? m_nBlockSize - 1 : m_nTaps - 1;
 
-    //How large does the FFT need to be
+    // How large does the FFT need to be?
     m_nFFTSize = 1;
     while(m_nFFTSize < (m_nBlockSize + m_nTaps + m_nOverlapLength))
         m_nFFTSize <<= 1;
 
-    //How many bins is that
+    // How many bins is that?
     m_nFFTBins = m_nFFTSize / 2 + 1;
 
-    //What do we need to scale the result of the iFFT by
+    // What do we need to scale the result of the iFFT by?
     m_fFFTScaler = 1.f / m_nFFTSize;
 
-    //Allocate buffers
+    // Scratch buffer for rotate order - set to 0.
+    m_pfTempSample = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
+    memset(m_pfTempSample, 0, m_nChannelCount * sizeof(audio_t));
+
+    // Allocate buffers for overlap operation.
+    // In psycho-acoustic filter, the overlap operation stores overlap
+    // information that carry forward from each audio block to the
+    // next, for each channel.
     m_pfOverlap = (audio_t **) aligned_malloc(m_nChannelCount * sizeof(audio_t *));
     for(unsigned i = 0; i < m_nChannelCount; i++) {
         m_pfOverlap[i] = (audio_t *) aligned_malloc(m_nOverlapLength * sizeof(audio_t));
+        memset(m_pfOverlap[i], 0, m_nOverlapLength * sizeof(audio_t));
     }
 
+    // Scratch buffer to hold the time domain samples - set to 0.
     m_pfScratchBufferA = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
+    memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
 
-    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc((NORDER+1) * sizeof(kiss_fft_cpx *));
-    for(unsigned i = 0; i < NORDER+1; i++) {
-        m_ppcpPsychFilters[i] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
-    }
-
+    // Scratch buffer to hold the frequency domain samples - set to 0.
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
+    memset(m_pcpScratch, 0, m_nFFTBins * sizeof(kiss_fft_cpx));
 
-    //Allocate FFT and iFFT for new size
+    // Allocate FFT and iFFT for new size - includes twiddle factor allocation.
     m_pFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
     m_pIFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 1, 0, 0);
 
-    printf("[%s] Initializing psycho filters\n", Name);
+    // Allocate space for filters for FIR. This is not different for all channels.
+    // Every channel with same sqrt() value shares the filters.
+    // i.e., NORDER+1 channels worth of filters.
+    m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc((NORDER+1) * sizeof(kiss_fft_cpx *));
+    for(unsigned i = 0; i < NORDER+1; i++) {
+        m_ppcpPsychFilters[i] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
+        memset(m_ppcpPsychFilters[i], 0, m_nFFTBins * sizeof(kiss_fft_cpx));
+    }
 
+    // Initialize Psychoacoustic filter values. We intitialize random data
+    // instead of calculating them as in the Linux app.
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
             m_ppcpPsychFilters[niChannel][niSample].r = rand() % 100;
@@ -282,6 +295,8 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
 
+        // Offload to regular invocation accelerators, or shared memory
+        // invocation accelerators, or SW as per compiler flags.
         if (DO_CHAIN_OFFLOAD) {
             StartCounter();
             FFIChainInst.RegularProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);

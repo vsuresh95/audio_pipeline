@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <data_type.hpp>
+#include <DataType.hpp>
 
 class CBFormat {
 public:

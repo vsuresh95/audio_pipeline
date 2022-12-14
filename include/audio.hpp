@@ -14,19 +14,23 @@ public:
     void loadSource();
     void processBlock();
     void PrintTimeInfo(unsigned factor);
-    
-    // decoder associated with this audio
+   
+    // Decoder associated with this audio.
     AmbisonicBinauralizer decoder;
-    // ambisonics rotator associated with this audio
+    // Ambisonics rotator associated with this audio.
     AmbisonicProcessor rotator;
-    // ambisonics zoomer associated with this audio
+    // Ambisonics zoomer associated with this audio.
     AmbisonicZoomer zoomer;
 
-    /// Temporary BFormat file to sum up ambisonics
+    /// Temporary BFormat file to sum up ambisonics.
     CBFormat sumBF;
 
+    // Instance of FFT-FIR-IFFT chain object. This object is
+    // eventually passed to rotator and decoder to perform the FFI
+    // chains in the respective Process() functions.
     FFIChain FFIChainInst;
 
+    // Output result buffer that binauralizer will populate.
     audio_t **resultSample;
 };
 

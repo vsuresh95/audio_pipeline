@@ -23,7 +23,6 @@ public:
 
     audio_t *m_pfScratchBufferA;
     audio_t *m_pfScratchBufferB;
-    audio_t *m_pfScratchBufferC;
     audio_t **m_pfOverlap;
 
     void Configure(unsigned nSampleRate, unsigned nBlockSize, unsigned nChannels);
