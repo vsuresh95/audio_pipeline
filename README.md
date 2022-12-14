@@ -49,3 +49,12 @@ make audio-pipeline-clean
 - `DO_CHAIN_OFFLOAD`: Offload FFT-FIR-IFFT chain to accelerators, with regular invocation (0)
 - `DO_NP_CHAIN_OFFLOAD`: Offload FFT-FIR-IFFT chain to accelerators, with SM invocation (0)
 - `USE_INT`: Use int type for all data, or float for CPU data and fixed point for accelerators (1)
+
+## Files
+- `audio_main.cpp`: Main function that iterates through all audio blocks
+- `audio.cpp`: Processes each audio block and instantiates the `rotator`, `zoomer` and `decoder`.
+- `AmbisonicBinauralizer.cpp`: Instantiated as `decoder` - responsible for binauralizer filter
+- `AmbisonicProcessor.cpp`: Instantiated as `rotator` - responsible for rotate order and psycho-acoustic filter
+- `AmbisonicZoomer.cpp`: Instantiated as `zoomer` - responsible for zoomer process
+- `FFIChain.cpp`: Responsible for running the FFT-FIR-IFFT chain and instantiates the accelerators.
+- `kiss_fft.cpp/kiss_fftr.cpp`: Responsible for the SW KISS_FFT kernel.
