@@ -10,14 +10,14 @@
 #include <kiss_fftr.hpp>
 #include <BFormat.hpp>
 
-#if (audio_t == float)
+#if (USE_INT == 1)
+#define FLOAT_TO_FIXED_WRAP(x, y) x
+#define FIXED_TO_FLOAT_WRAP(x, y) x
+#else
 #include <fixed_point.h>
 #define AUDIO_FX_IL 4
 #define FLOAT_TO_FIXED_WRAP(x, y) float_to_fixed32(x, y)
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
-#else
-#define FLOAT_TO_FIXED_WRAP(x, y) x
-#define FIXED_TO_FLOAT_WRAP(x, y) x
 #endif
 
 // Size and parameter defines

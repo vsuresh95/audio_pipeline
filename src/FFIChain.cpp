@@ -38,9 +38,6 @@ static inline int64_t read_mem (void* dst)
 void FFIChain::InitParams() {
     num_samples = 1 << logn_samples;
 
-	printf("logn_samples = %d\n", logn_samples);
-	printf("num_samples = %d\n", num_samples);
-
 	in_len = 2 * num_samples;
 	out_len = 2 * num_samples;
 	in_size = in_len * sizeof(device_t);
@@ -51,9 +48,6 @@ void FFIChain::InitParams() {
 
     acc_size = mem_size;
     acc_offset = out_offset + out_len + SYNC_VAR_SIZE;
-
-	printf("acc_size = %d\n", acc_size);
-	printf("acc_offset = %d\n", acc_offset);
 
     mem_size *= NUM_DEVICES+5;
 
@@ -71,8 +65,6 @@ void FFIChain::ConfigureAcc() {
 	// Allocate memory pointers
 	mem = (device_t *) aligned_malloc(mem_size);
     sm_sync = (volatile device_t*) mem;
-
-	printf("mem = %p\n", mem);
 
 	// Allocate and populate page table
 	ptable = (unsigned **) aligned_malloc(NCHUNK(mem_size) * sizeof(unsigned *));
@@ -121,16 +113,12 @@ void FFIChain::ConfigureAcc() {
 
 	sm_sync[acc_offset + FLT_VALID_FLAG_OFFSET] = 0;
 	sm_sync[acc_offset + FLT_READY_FLAG_OFFSET] = 1;
-
-    printf("ConfigureAcc done\n");
 }
 
 void FFIChain::StartAcc() {
 	FFTInst.StartAcc();
 	FIRInst.StartAcc();
 	IFFTInst.StartAcc();
-
-    printf("StartAcc done\n");
 }
 
 void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {

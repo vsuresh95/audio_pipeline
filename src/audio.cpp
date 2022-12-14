@@ -28,16 +28,12 @@ void ABAudio::Configure() {
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
 
-        printf("FFIChainInst.logn_samples = %d\n", FFIChainInst.logn_samples);
-
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
     } else if (DO_NP_CHAIN_OFFLOAD) {
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
         FFIChainInst.StartAcc();
-
-        printf("FFIChainInst.logn_samples = %d\n", FFIChainInst.logn_samples);
 
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
