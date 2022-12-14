@@ -264,6 +264,24 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsi
 	}
 }
 
+void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
+	int InitLength = pBFSrcDst->m_nSamples;
+	spandex_token_t CoalescedData;
+	device_t* dst;
+
+	dst = mem + (7 * acc_offset) + SYNC_VAR_SIZE;
+
+	// printf("Init Filters start\n");
+
+	for (unsigned niSample = 0; niSample < InitLength; niSample++, dst+=2)
+	{
+		CoalescedData.value_32_1 = FLOAT_TO_FIXED_WRAP(super_twiddles[niSample].r, AUDIO_FX_IL);
+		CoalescedData.value_32_2 = FLOAT_TO_FIXED_WRAP(super_twiddles[niSample].i, AUDIO_FX_IL);
+
+		write_mem((void *) dst, CoalescedData.value_64);
+	}
+}
+
 void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {
 	if (UseESP) {
 		SpandexConfig.spandex_reg = 0;

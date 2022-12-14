@@ -74,6 +74,7 @@ public:
     void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
     // void PipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
 
+    void InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles);
     void InitData(CBFormat* pBFSrcDst, unsigned niChannel);
     void InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters);
     void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsigned niChannel);

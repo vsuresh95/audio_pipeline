@@ -30,6 +30,9 @@ void ABAudio::Configure() {
 
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
+
+    	// Write input data for psycho twiddle factors
+    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
     } else if (DO_NP_CHAIN_OFFLOAD) {
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
