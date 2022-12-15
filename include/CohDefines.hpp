@@ -1,9 +1,7 @@
 #ifndef COH_DEFINES_H
 #define COH_DEFINES_H
 
-///////////////////////////////////////////////////////////////
-// Helper unions
-///////////////////////////////////////////////////////////////
+// Helper unions for Spandex register and coalescing.
 typedef union
 {
   struct
@@ -31,9 +29,7 @@ typedef union
   int64_t value_64;
 } spandex_token_t;
 
-///////////////////////////////////////////////////////////////
-// Choosing the read, write code and coherence register config
-///////////////////////////////////////////////////////////////
+// Coherence defines to different modes in ESP and Spandex.
 #define QUAUX(X) #X
 #define QU(X) QUAUX(X)
 
@@ -47,9 +43,7 @@ typedef union
 #define SPX_BASELINE_REQV 1
 #define SPX_BASELINE_MESI 0
 
-///////////////////////////////////////////////////////////////
-// Choosing the read and write code
-///////////////////////////////////////////////////////////////
+// Choosing the read and write code for Extended ASM functions.
 #if (IS_ESP == 1)
 #define READ_CODE 0x0002B30B
 #define WRITE_CODE 0x0062B02B
@@ -66,6 +60,29 @@ typedef union
 #else
 #define READ_CODE 0x0002B30B
 #define WRITE_CODE 0x0062B02B
+#endif
+#endif
+
+// Coherence mode string for print header.
+#if (IS_ESP == 1)
+#if (COH_MODE == ESP_NON_COHERENT_DMA)
+const char CohPrintHeader[] = "ESP Non-Coherent DMA";
+#elif (COH_MODE == ESP_LLC_COHERENT_DMA)
+const char CohPrintHeader[] = "ESP LLC-Coherent DMA";
+#elif (COH_MODE == ESP_COHERENT_DMA)
+const char CohPrintHeader[] = "ESP Coherent DMA";
+#else
+const char CohPrintHeader[] = "ESP Baseline MESI";
+#endif
+#else
+#if (COH_MODE == SPX_OWNER_PREDICTION)
+const char CohPrintHeader[] = "SPX Owner Prediction";
+#elif (COH_MODE == SPX_WRITE_THROUGH_FWD)
+const char CohPrintHeader[] = "SPX Write-through forwarding";
+#elif (COH_MODE == SPX_BASELINE_REQV)
+const char CohPrintHeader[] = "SPX Baseline Spandex (ReqV)";
+#else
+const char CohPrintHeader[] = "SPX Baseline Spandex";
 #endif
 #endif
 

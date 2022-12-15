@@ -4,7 +4,7 @@ Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Realit
 
 ## Setup Instructions
 
-This repo is included as a submodule of [ESP](https://github.com/vsuresh95/esp).
+This repo is included as a submodule of this branch of [ESP](https://github.com/vsuresh95/esp/tree/f_audio_baremetal).
 
 Or you could clone this repo standalone using the following command:
 

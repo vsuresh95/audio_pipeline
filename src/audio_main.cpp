@@ -12,9 +12,13 @@
 // DO_NP_CHAIN_OFFLOAD: Offload FFT-FIR-IFFT chain to accelerators, with SM invocation (0)
 // USE_INT: Use int type for all data, or float for CPU data and fixed point for accelerators (1)
 
+void PrintHeader();
+
 int main(int argc, char **argv) {
-    const int numBlocks = NUM_BLOCKS;  
-   
+    PrintHeader();
+
+    const int numBlocks = NUM_BLOCKS;
+
     ABAudio audio;
     // Configure all tasks in the pipeline,
     // and initialize any data.
@@ -35,4 +39,17 @@ int main(int argc, char **argv) {
     while(1);
 
     return 0;
+}
+
+void PrintHeader() {
+    printf("---------------------------------------------\n");
+    printf("3D AUDIO DECODER\n");
+    printf("---------------------------------------------\n");
+    printf("NUM_BLOCKS = %d\n", NUM_BLOCKS);
+    printf("BLOCK_SIZE = %d\n", BLOCK_SIZE);
+    printf("COH PROTOCOL = %s\n", CohPrintHeader);
+    printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
+                                (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
+                                "No Offloading")));
+    printf("\n");
 }
