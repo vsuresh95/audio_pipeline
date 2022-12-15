@@ -51,7 +51,7 @@ make audio-pipeline-clean
 - `USE_INT`: Use int type for all data, or float for CPU data and fixed point for accelerators (1)
 
 ## Files
-- `audio_main.cpp`: Main function that iterates through all audio blocks
+- `main.cpp`: Main function that iterates through all audio blocks
 - `audio.cpp`: Processes each audio block and instantiates the `rotator`, `zoomer` and `decoder`.
 - `AmbisonicBinauralizer.cpp`: Instantiated as `decoder` - responsible for binauralizer filter
 - `AmbisonicProcessor.cpp`: Instantiated as `rotator` - responsible for rotate order and psycho-acoustic filter
