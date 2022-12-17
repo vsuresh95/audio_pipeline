@@ -66,8 +66,8 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     for(unsigned niEar = 0; niEar < 2; niEar++) {
         for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
             for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
-                m_ppcpFilters[niEar][niChannel][niSample].r = rand() % 100;
-                m_ppcpFilters[niEar][niChannel][niSample].i = rand() % 100;
+                m_ppcpFilters[niEar][niChannel][niSample].r = myRand();
+                m_ppcpFilters[niEar][niChannel][niSample].i = myRand();
             }
         }
     }

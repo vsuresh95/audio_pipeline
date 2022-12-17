@@ -1,4 +1,5 @@
 #include <audio.hpp>
+#include <cstring>
 
 void ABAudio::Configure() {
     Name = (char *) "AUDIO";
@@ -16,12 +17,8 @@ void ABAudio::Configure() {
     resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
     resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
     resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-
-    for(unsigned niEar = 0; niEar < 2; niEar++) {
-        for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
-            resultSample[niEar][niSample] = 0;
-        }
-    }
+    memset(resultSample[0], 0, BLOCK_SIZE * sizeof(audio_t));
+    memset(resultSample[1], 0, BLOCK_SIZE * sizeof(audio_t));
 
     // Configure and initialize parameters for Bformat data object,
     // which holds the data for each channel throughout the pipeline.
@@ -69,7 +66,7 @@ void ABAudio::processBlock() {
     // source file, we initialize we random data.
     for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
         for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
-            sumBF.m_ppfChannels[niChannel][niSample] = rand() % 100;
+            sumBF.m_ppfChannels[niChannel][niSample] = myRand();
         }
     }
 

@@ -67,31 +67,31 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     // instead of calculating them as in the Linux app.
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
-            m_ppcpPsychFilters[niChannel][niSample].r = rand() % 100;
-            m_ppcpPsychFilters[niChannel][niSample].i = rand() % 100;
+            m_ppcpPsychFilters[niChannel][niSample].r = myRand();
+            m_ppcpPsychFilters[niChannel][niSample].i = myRand();
         }
     }
 }
 
 void AmbisonicProcessor::updateRotation() {
-    m_fCosAlpha = rand() % 100;
-    m_fSinAlpha = rand() % 100;
-    m_fCosBeta = rand() % 100;
-    m_fSinBeta = rand() % 100;
-    m_fCosGamma = rand() % 100;
-    m_fSinGamma = rand() % 100;
-    m_fCos2Alpha = rand() % 100;
-    m_fSin2Alpha = rand() % 100;
-    m_fCos2Beta = rand() % 100;
-    m_fSin2Beta = rand() % 100;
-    m_fCos2Gamma = rand() % 100;
-    m_fSin2Gamma = rand() % 100;
-    m_fCos3Alpha = rand() % 100;
-    m_fSin3Alpha = rand() % 100;
-    m_fCos3Beta = rand() % 100;
-    m_fSin3Beta = rand() % 100;
-    m_fCos3Gamma = rand() % 100;
-    m_fSin3Gamma = rand() % 100;
+    m_fCosAlpha = myRand();
+    m_fSinAlpha = myRand();
+    m_fCosBeta = myRand();
+    m_fSinBeta = myRand();
+    m_fCosGamma = myRand();
+    m_fSinGamma = myRand();
+    m_fCos2Alpha = myRand();
+    m_fSin2Alpha = myRand();
+    m_fCos2Beta = myRand();
+    m_fSin2Beta = myRand();
+    m_fCos2Gamma = myRand();
+    m_fSin2Gamma = myRand();
+    m_fCos3Alpha = myRand();
+    m_fSin3Alpha = myRand();
+    m_fCos3Beta = myRand();
+    m_fSin3Beta = myRand();
+    m_fCos3Gamma = myRand();
+    m_fSin3Gamma = myRand();
 }
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {

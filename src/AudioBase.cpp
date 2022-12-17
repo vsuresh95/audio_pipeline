@@ -9,6 +9,8 @@ AudioBase::AudioBase() {
     	TotalTime[i] = 0;
 
     Name = (char *) aligned_malloc(64 * sizeof(char *));
+
+	RandFactor = 3333;
 }
 
 void AudioBase::StartCounter() {
@@ -44,4 +46,9 @@ unsigned AudioBase::log2(unsigned product) {
 	}
 
 	return exp;
+}
+
+audio_t AudioBase::myRand() {
+	RandFactor = (RandFactor * RandFactor) % 10000;
+	return (audio_t) RandFactor / 4242.4242;
 }

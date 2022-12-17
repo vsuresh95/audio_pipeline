@@ -13,17 +13,17 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
     m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
-        m_AmbEncoderFront[niChannel] = rand() % 100;
-        m_AmbEncoderFront_weighted[niChannel] = rand() % 100;
+        m_AmbEncoderFront[niChannel] = myRand();
+        m_AmbEncoderFront_weighted[niChannel] = myRand();
     }
 }
 
 void AmbisonicZoomer::updateZoom() {
     // Limit the zoom value to always preserve the spacial effect.
-    m_fZoom = rand() % 100; 
-    m_fZoomRed = rand() % 100;
-    m_fZoomBlend = rand() % 100;
-    m_AmbFrontMic = rand() % 100;
+    m_fZoom = myRand(); 
+    m_fZoomRed = myRand();
+    m_fZoomBlend = myRand();
+    m_AmbFrontMic = myRand();
 }
 
 void AmbisonicZoomer::Process(CBFormat *pBFSrcDst, unsigned nSamples)
