@@ -114,6 +114,7 @@ void FFIChain::ConfigureAcc() {
     FFTInst.acc_size = FIRInst.acc_size = IFFTInst.acc_size = acc_size;
     FFTInst.SpandexReg = FIRInst.SpandexReg = IFFTInst.SpandexReg = SpandexConfig.spandex_reg;
     FFTInst.CoherenceMode =  FIRInst.CoherenceMode = IFFTInst.CoherenceMode = CoherenceMode;
+	FFTInst.inverse = 0;
 	IFFTInst.inverse = 1;
 
 	// After assigning the parameters, we call ConfigureAcc() for
