@@ -1,6 +1,8 @@
 #ifndef COH_DEFINES_H
 #define COH_DEFINES_H
 
+#include <DataType.hpp>
+
 // Helper unions for Spandex register and coalescing.
 typedef union
 {
@@ -23,11 +25,21 @@ typedef union
 {
   struct
   {
-    int32_t value_32_1;
-    int32_t value_32_2;
+    device_t value_32_1;
+    device_t value_32_2;
   };
   int64_t value_64;
-} spandex_token_t;
+} device_token_t;
+
+typedef union
+{
+  struct
+  {
+    audio_t value_32_1;
+    audio_t value_32_2;
+  };
+  int64_t value_64;
+} audio_token_t;
 
 // Coherence defines to different modes in ESP and Spandex.
 #define QUAUX(X) #X

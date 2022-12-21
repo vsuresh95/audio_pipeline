@@ -91,9 +91,10 @@ public:
     void InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles);
     void InitData(CBFormat* pBFSrcDst, unsigned niChannel);
     void InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters);
-    void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA, unsigned niChannel);
+    void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA);
 
-    // void PipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
+    // void ReadAndOverlap(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA);
+    // void PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
 };
 
 #endif // FFICHAIN_H
