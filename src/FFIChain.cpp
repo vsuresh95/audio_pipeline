@@ -6,82 +6,8 @@ extern "C" {
 }
 
 #include <FFIChain.hpp>
-
-// Helper function to perform memory write using Spandex request types.
-// By default, the writes are regular stores.
-// See CohDefines.hpp for definition of WRITE_CODE.
-static inline void write_mem (void* dst, int64_t value_64)
-{
-	asm volatile (
-		"mv t0, %0;"
-		"mv t1, %1;"
-		".word " QU(WRITE_CODE)
-		:
-		: "r" (dst), "r" (value_64)
-		: "t0", "t1", "memory"
-	);
-}
-
-// Helper function to perform memory read using Spandex request types.
-// By default, the reads are regular loads.
-// See CohDefines.hpp for definition of READ_CODE.
-static inline int64_t read_mem (void* dst)
-{
-	int64_t value_64;
-
-	asm volatile (
-		"mv t0, %1;"
-		".word " QU(READ_CODE) ";"
-		"mv %0, t1"
-		: "=r" (value_64)
-		: "r" (dst)
-		: "t0", "t1", "memory"
-	);
-
-	return value_64;
-}
-
-void FFIChain::InitParams() {
-	// Number of samples for the FFT or FIR accelerator. (1024)
-    num_samples = 1 << logn_samples;
-
-	// Total number of samples will be 2x due to complex number pairs.
-	// Size is calculated for the data type that the device works on.
-	// Here, device_t can be int (4B) or fixed-point (4B).
-	in_len = 2 * num_samples;
-	out_len = 2 * num_samples;
-	in_size = in_len * sizeof(device_t);
-	out_size = out_len * sizeof(device_t);
-
-	// We add the size of control partition to determine total number
-	// of elements for each accelerator.
-    acc_len = SYNC_VAR_SIZE + out_len;
-    acc_size = acc_len * sizeof(device_t);
-
-	// Total size of data for each accelerator
-	mem_size = acc_size;
-
-	// Total size for all accelerators combined:
-	// 0*acc_size - 1*acc_size: FFT Input
-	// 1*acc_size - 2*acc_size: FIR Input
-	// 2*acc_size - 3*acc_size: IFFT Input
-	// 3*acc_size - 4*acc_size: CPU Input
-	// 4*acc_size - 5*acc_size: Unused
-	// 5*acc_size - 7*acc_size: FIR filters
-	// 7*acc_size - 7*acc_size: Twiddle factors
-	// Therefore, NUM_DEVICES+5 = 8.
-    mem_size = acc_size * NUM_DEVICES+5;
-
-	// Helper flags for sync flags that the CPU needs to access.
-	// We add a pair of sync flags for FIR filter weights, so that
-	// this write can be overlapped with FFT operations.
-	ConsRdyFlag = 0*acc_len + READY_FLAG_OFFSET;
-	ConsVldFlag = 0*acc_len + VALID_FLAG_OFFSET;
-	FltRdyFlag = 1*acc_len + FLT_READY_FLAG_OFFSET;
-	FltVldFlag = 1*acc_len + FLT_VALID_FLAG_OFFSET;
-	ProdRdyFlag = 3*acc_len + READY_FLAG_OFFSET;
-	ProdVldFlag = 3*acc_len + VALID_FLAG_OFFSET;
-}
+#include <FFIChainHelper.hpp>
+#include <FFIChainData.hpp>
 
 void FFIChain::ConfigureAcc() {
 	InitParams();
@@ -190,236 +116,95 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	sm_sync[ProdRdyFlag] = 1;
 }
 
-void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
-	int InitLength = 2 * (pBFSrcDst->m_nSamples);
-	int niChannel = pBFSrcDst->m_nChannelCount - InitChannel;
-	audio_token_t SrcData;
-	audio_t* src;
-	device_token_t DstData;
-	device_t* dst;
+void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
+	unsigned InputChannelsLeft = m_nChannelCount;
+	unsigned FilterChannelsLeft = m_nChannelCount;
+	unsigned OutputChannelsLeft = m_nChannelCount;
 
-	// See init_params() for memory layout.
-	src = pBFSrcDst->m_ppfChannels[niChannel];
-	dst = mem + SYNC_VAR_SIZE;
+	while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
+		if (InputChannelsLeft) {
+			// Wait for FFT (consumer) to be ready
+			if (sm_sync[ConsRdyFlag] == 1) {
+				sm_sync[ConsRdyFlag] = 0;
+				// Write input data for FFT
+				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+				// Inform FFT (consumer)
+				sm_sync[ConsVldFlag] = 1;
+				InputChannelsLeft--;
+			}
+		}
 
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		if (FilterChannelsLeft) {
+			// Wait for FIR (consumer) to be ready
+			if (sm_sync[FltRdyFlag] == 1) {
+				sm_sync[FltRdyFlag] = 0;
 
-		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
+            	unsigned iChannelOrder = int(sqrt(m_nChannelCount - FilterChannelsLeft));
 
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
-	}
-}
+				// Write input data for filters
+				InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+				// Inform FIR (consumer)
+				sm_sync[FltVldFlag] = 1;
+				FilterChannelsLeft--;
+			}
+		}
 
-void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
-	int InitLength = 2 * (pBFSrcDst->m_nSamples + 1);
-	audio_token_t SrcData;
-	audio_t* src;
-	device_token_t DstData;
-	device_t* dst;
-
-	// See init_params() for memory layout.
-	src = (audio_t *) m_Filters;
-	dst = mem + (5 * acc_len) + SYNC_VAR_SIZE;
-
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
-
-		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
-	}
-}
-
-void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA) {
-	int ReadLength =  2 * (pBFSrcDst->m_nSamples);
-	device_token_t SrcData;
-	device_t* src;
-	audio_token_t DstData;
-	audio_t* dst;
-
-	// See init_params() for memory layout.
-	src = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
-	dst = m_pfScratchBufferA;
-
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
-
-		DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
-	}
-}
-
-void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
-	int InitLength = pBFSrcDst->m_nSamples;
-	audio_token_t SrcData;
-	audio_t* src;
-	device_token_t DstData;
-	device_t* dst;
-
-	// See init_params() for memory layout.
-	src = (audio_t *) super_twiddles;
-	dst = mem + (7 * acc_len) + SYNC_VAR_SIZE;
-
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
-
-		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
-	}
-}
-
-void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {
-	if (UseESP) {
-		SpandexConfig.spandex_reg = 0;
-	} else {
-		if (CohPrtcl == SPX_OWNER_PREDICTION) {
-			SpandexConfig.spandex_reg = 0;
-			SpandexConfig.r_en = 1;
-			SpandexConfig.r_type = 2;
-			SpandexConfig.w_en = 1;
-			SpandexConfig.w_op = 1;
-			SpandexConfig.w_type = 1;
-		} else if (CohPrtcl == SPX_WRITE_THROUGH_FWD) {
-			SpandexConfig.spandex_reg = 0;
-			SpandexConfig.r_en = 1;
-			SpandexConfig.r_type = 2;
-			SpandexConfig.w_en = 1;
-			SpandexConfig.w_type = 1;
-		} else if (CohPrtcl == SPX_BASELINE_REQV) {
-			SpandexConfig.spandex_reg = 0;
-			SpandexConfig.r_en = 1;
-			SpandexConfig.r_type = 1;
-		} else {
-			SpandexConfig.spandex_reg = 0;
+		if (OutputChannelsLeft) {
+			// Wait for IFFT (producer) to send output
+			if (sm_sync[ProdVldFlag] == 1) {
+				sm_sync[ProdVldFlag] = 0;
+				// Read back output
+				PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - OutputChannelsLeft);
+				// Inform IFFT (producer)
+				sm_sync[ProdRdyFlag] = 1;
+				OutputChannelsLeft--;
+			}
 		}
 	}
 }
 
-void FFIChain::SetCohMode(unsigned UseESP, unsigned CohPrtcl) {
-	if (!UseESP) {
-		CoherenceMode = ACC_COH_FULL;
-	} else {
-		if (CohPrtcl == ESP_NON_COHERENT_DMA) {
-			CoherenceMode = ACC_COH_NONE;
-		} else if (CohPrtcl == ESP_LLC_COHERENT_DMA) {
-			CoherenceMode = ACC_COH_LLC;
-		} else if (CohPrtcl == ESP_COHERENT_DMA) {
-			CoherenceMode = ACC_COH_RECALL;
-		} else {
-			CoherenceMode = ACC_COH_FULL;
-		}
-	}    
-}
+void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned InputChannelsLeft = m_nChannelCount;
+		unsigned FilterChannelsLeft = m_nChannelCount;
+		unsigned OutputChannelsLeft = m_nChannelCount;
 
-// void FFIChain::ReadAndOverlap(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA) {
-// 	int ReadLength =  2 * (pBFSrcDst->m_nSamples);
-// 	device_token_t SrcData;
-// 	device_t* src;
-// 	audio_token_t DstData;
-// 	audio_t* dst;
-// 
-// 	// See init_params() for memory layout.
-// 	src = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
-// 	dst = m_pfScratchBufferA;
-// 
-// 	// We coalesce 4B elements to 8B accesses for 2 reasons:
-// 	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-// 	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-// 	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
-// 	{
-// 		// Need to cast to void* for extended ASM code.
-// 		SrcData.value_64 = read_mem((void *) src);
-// 
-// 		DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-// 		DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-// 
-// 		// Need to cast to void* for extended ASM code.
-// 		write_mem((void *) dst, DstData.value_64);
-// 	}
-// }
-// 
-// void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters) {
-// 	unsigned InputChannelsLeft = pBFSrcDst->m_nChannelCount;
-// 	unsigned FilterChannelsLeft = pBFSrcDst->m_nChannelCount;
-// 	unsigned OutputChannelsLeft = pBFSrcDst->m_nChannelCount;
-// 
-// 	while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
-// 		if (InputChannelsLeft) {
-// 			// Wait for FFT (consumer) to be ready
-// 			if (sm_sync[ConsRdyFlag] == 1) {
-// 				sm_sync[ConsRdyFlag] = 0;
-// 				// Write input data for FFT
-// 				InitData(pBFSrcDst, InputChannelsLeft);
-// 				// Inform FFT (consumer)
-// 				sm_sync[ConsVldFlag] = 1;
-// 				InputChannelsLeft--;
-// 			}
-// 		}
-// 
-// 		if (FilterChannelsLeft) {
-// 			// Wait for FIR (consumer) to be ready
-// 			if (sm_sync[FltRdyFlag] == 1) {
-// 				sm_sync[FltRdyFlag] = 0;
-// 				// Write input data for filters
-// 				InitFilters(pBFSrcDst, m_Filters[FilterChannelsLeft]);
-// 				// Inform FIR (consumer)
-// 				sm_sync[FltVldFlag] = 1;
-// 				FilterChannelsLeft--;
-// 			}
-// 		}
-// 
-// 		if (OutputChannelsLeft) {
-// 			// Wait for IFFT (producer) to send output
-// 			if (sm_sync[ProdVldFlag] == 1) {
-// 				sm_sync[ProdVldFlag] = 0;
-// 				// Read back output
-// 				ReadAndOverlap(pBFSrcDst, OutputChannelsLeft);
-// 				// Inform IFFT (producer)
-// 				sm_sync[ProdRdyFlag] = 1;
-// 				OutputChannelsLeft--;
-// 			}
-// 		}
-// 
-//         for(unsigned ni = 0; ni < m_nFFTSize; ni++)
-//             m_pfScratchBufferA[ni] *= m_fFFTScaler;
-// 
-//         memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
-// 
-//         for(unsigned ni = 0; ni < m_nOverlapLength; ni++) {
-//             pBFSrcDst->m_ppfChannels[niChannel][ni] += m_pfOverlap[niChannel][ni];
-//         }
-//         
-//         memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
-// 	}
-// }
+		while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
+			if (InputChannelsLeft) {
+				// Wait for FFT (consumer) to be ready
+				if (sm_sync[ConsRdyFlag] == 1) {
+					sm_sync[ConsRdyFlag] = 0;
+					// Write input data for FFT
+					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+					// Inform FFT (consumer)
+					sm_sync[ConsVldFlag] = 1;
+					InputChannelsLeft--;
+				}
+			}
+
+			if (FilterChannelsLeft) {
+				// Wait for FIR (consumer) to be ready
+				if (sm_sync[FltRdyFlag] == 1) {
+					sm_sync[FltRdyFlag] = 0;
+					// Write input data for filters
+					InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - FilterChannelsLeft]);
+					// Inform FIR (consumer)
+					sm_sync[FltVldFlag] = 1;
+					FilterChannelsLeft--;
+				}
+			}
+
+			if (OutputChannelsLeft) {
+				// Wait for IFFT (producer) to send output
+				if (sm_sync[ProdVldFlag] == 1) {
+					sm_sync[ProdVldFlag] = 0;
+					// Read back output
+					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
+					// Inform IFFT (producer)
+					sm_sync[ProdRdyFlag] = 1;
+					OutputChannelsLeft--;
+				}
+			}
+		}
+	}
+}

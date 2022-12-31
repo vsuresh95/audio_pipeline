@@ -78,6 +78,13 @@ public:
 	unsigned ProdRdyFlag;
 	unsigned ProdVldFlag;
 
+    unsigned m_nChannelCount;
+    unsigned m_nBlockSize;
+    unsigned m_nFFTSize;
+    unsigned m_nFFTBins;
+    unsigned m_nOverlapLength;
+    audio_t m_fFFTScaler;
+
     void SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl);
     void SetCohMode(unsigned UseESP, unsigned CohPrtcl);
 
@@ -93,8 +100,11 @@ public:
     void InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters);
     void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA);
 
-    // void ReadAndOverlap(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA);
-    // void PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters);
+    void PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigned CurChannel);
+    void PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
+
+    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast);
+    void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 };
 
 #endif // FFICHAIN_H

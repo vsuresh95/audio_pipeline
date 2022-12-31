@@ -50,6 +50,7 @@ void PrintHeader() {
     printf("COH PROTOCOL = %s\n", CohPrintHeader);
     printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
                                 (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
-                                "No Offloading")));
+                                (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :
+                                "No Offloading"))));
     printf("\n");
 }

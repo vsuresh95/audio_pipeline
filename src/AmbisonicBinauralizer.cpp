@@ -8,7 +8,7 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     m_nChannelCount = nChannels;
 
     // Hard-coded based on observations from Linux app.
-    m_nTaps = 140;
+    m_nTaps = 141;
     
     m_nBlockSize = nBlockSize;
 
@@ -81,54 +81,63 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
 
     // Perform the convolution on both ears. Potentially more realistic results but requires double the number of
     // convolutions.
-    for(niEar = 0; niEar < 2; niEar++)
-    {
-        memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
-        for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
+    if (DO_PP_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        EndCounter(0);
+    } else {
+        for(niEar = 0; niEar < 2; niEar++)
         {
-            // Offload to regular invocation accelerators, or shared memory
-            // invocation accelerators, or SW as per compiler flags.
-            if (DO_CHAIN_OFFLOAD) {
-                StartCounter();
-                FFIChainInst.RegularProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
-                EndCounter(0);
-            } else if (DO_NP_CHAIN_OFFLOAD) {
-                StartCounter();
-                FFIChainInst.NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
-                EndCounter(0);
-            } else {
-                memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-                memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+            memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
+            for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
+            {
+                // Offload to regular invocation accelerators, or shared memory
+                // invocation accelerators, or SW as per compiler flags.
+                if (DO_CHAIN_OFFLOAD) {
+                    StartCounter();
+                    FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+                    FFIChainInst.RegularProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
+                    EndCounter(0);
+                } else if (DO_NP_CHAIN_OFFLOAD) {
+                    StartCounter();
+                    FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+                    FFIChainInst.NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel);
+                    EndCounter(0);
+                } else {
+                    memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+                    memset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
-                StartCounter();
-                kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
-                EndCounter(0);
+                    StartCounter();
+                    kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+                    EndCounter(0);
 
-                StartCounter();
-                for(ni = 0; ni < m_nFFTBins; ni++)
-                {
-                    cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
-                                - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
-                    cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
-                                + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
-                    m_pcpScratch[ni] = cpTemp;
+                    StartCounter();
+                    for(ni = 0; ni < m_nFFTBins; ni++)
+                    {
+                        cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
+                                    - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
+                        cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
+                                    + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
+                        m_pcpScratch[ni] = cpTemp;
+                    }
+                    EndCounter(1);
+
+                    StartCounter();
+                    kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
+                    EndCounter(2);
                 }
-                EndCounter(1);
 
-                StartCounter();
-                kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
-                EndCounter(2);
+                for(ni = 0; ni < m_nFFTSize; ni++)
+                    m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];
             }
-
             for(ni = 0; ni < m_nFFTSize; ni++)
-                m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];
+                m_pfScratchBufferA[ni] *= m_fFFTScaler;
+            memcpy(ppfDst[niEar], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
+            for(ni = 0; ni < m_nOverlapLength; ni++)
+                ppfDst[niEar][ni] += m_pfOverlap[niEar][ni];
+            memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
         }
-        for(ni = 0; ni < m_nFFTSize; ni++)
-            m_pfScratchBufferA[ni] *= m_fFFTScaler;
-        memcpy(ppfDst[niEar], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
-        for(ni = 0; ni < m_nOverlapLength; ni++)
-            ppfDst[niEar][ni] += m_pfOverlap[niEar][ni];
-        memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
 }
 
@@ -136,7 +145,7 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD) {
+    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         printf("Binaur Chain\t = %lu\n", TotalTime[0]/factor);
     } else {
         printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
