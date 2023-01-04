@@ -93,10 +93,12 @@ void ABAudio::processBlock() {
 
     // First, we update the zoomer parameters. In the bare metal app, we use
     // random numbers. Then, we perform zoomer process.
+	WriteScratchReg(0x88888888);
     StartCounter();
     zoomer.updateZoom();
     zoomer.Process(&sumBF, BLOCK_SIZE);
     EndCounter(1);
+	WriteScratchReg(0);
 
     // Perform binauralizer filtering to decode audio for 2 ears.
     StartCounter();

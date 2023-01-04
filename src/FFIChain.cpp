@@ -10,6 +10,8 @@ extern "C" {
 #include <FFIChainData.hpp>
 
 void FFIChain::ConfigureAcc() {
+    Name = (char *) "FFI CHAIN";
+
 	InitParams();
 
 	// Allocate total memory, and assign the starting to a new pointer - 
@@ -93,7 +95,9 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	// Reset flag for next iteration.
 	sm_sync[ConsRdyFlag] = 0;
 	// Write input data for FFT.
+    StartCounter();
 	InitData(pBFSrcDst, CurChannel);
+    EndCounter(0);
 	// Inform FFT (consumer) to start.
 	sm_sync[ConsVldFlag] = 1;
 
@@ -102,7 +106,9 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	// Reset flag for next iteration.
 	sm_sync[FltRdyFlag] = 0;
 	// Write input data for FIR filters.
+    StartCounter();
 	InitFilters(pBFSrcDst, m_Filters);
+    EndCounter(1);
 	// Inform FIR (consumer) to start.
 	sm_sync[FltVldFlag] = 1;
 
@@ -111,7 +117,9 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	// Reset flag for next iteration.
 	sm_sync[ProdVldFlag] = 0;
 	// Read back output from IFFT
+    StartCounter();
 	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
+    EndCounter(2);
 	// Inform IFFT (producer) - ready for next iteration.
 	sm_sync[ProdRdyFlag] = 1;
 }
@@ -127,7 +135,11 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 			if (sm_sync[ConsRdyFlag] == 1) {
 				sm_sync[ConsRdyFlag] = 0;
 				// Write input data for FFT
+				WriteScratchReg(0x11111111);
+        		StartCounter();
 				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+        		EndCounter(0);
+				WriteScratchReg(0);
 				// Inform FFT (consumer)
 				sm_sync[ConsVldFlag] = 1;
 				InputChannelsLeft--;
@@ -142,7 +154,11 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
             	unsigned iChannelOrder = int(sqrt(m_nChannelCount - FilterChannelsLeft));
 
 				// Write input data for filters
+				WriteScratchReg(0x22222222);
+        		StartCounter();
 				InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+        		EndCounter(1);
+				WriteScratchReg(0);
 				// Inform FIR (consumer)
 				sm_sync[FltVldFlag] = 1;
 				FilterChannelsLeft--;
@@ -154,7 +170,11 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 			if (sm_sync[ProdVldFlag] == 1) {
 				sm_sync[ProdVldFlag] = 0;
 				// Read back output
+				WriteScratchReg(0x33333333);
+        		StartCounter();
 				PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - OutputChannelsLeft);
+        		EndCounter(2);
+				WriteScratchReg(0);
 				// Inform IFFT (producer)
 				sm_sync[ProdRdyFlag] = 1;
 				OutputChannelsLeft--;
@@ -175,7 +195,11 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[ConsRdyFlag] == 1) {
 					sm_sync[ConsRdyFlag] = 0;
 					// Write input data for FFT
+					WriteScratchReg(0x44444444);
+        			StartCounter();
 					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+        			EndCounter(3);
+					WriteScratchReg(0);
 					// Inform FFT (consumer)
 					sm_sync[ConsVldFlag] = 1;
 					InputChannelsLeft--;
@@ -187,7 +211,11 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[FltRdyFlag] == 1) {
 					sm_sync[FltRdyFlag] = 0;
 					// Write input data for filters
+					WriteScratchReg(0x55555555);
+        			StartCounter();
 					InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - FilterChannelsLeft]);
+        			EndCounter(4);
+					WriteScratchReg(0);
 					// Inform FIR (consumer)
 					sm_sync[FltVldFlag] = 1;
 					FilterChannelsLeft--;
@@ -199,12 +227,37 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[ProdVldFlag] == 1) {
 					sm_sync[ProdVldFlag] = 0;
 					// Read back output
+					WriteScratchReg(0x66666666);
+        			StartCounter();
 					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
+        			EndCounter(5);
+					WriteScratchReg(0);
 					// Inform IFFT (producer)
 					sm_sync[ProdRdyFlag] = 1;
 					OutputChannelsLeft--;
 				}
 			}
+		}
+	}
+}
+
+void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM %s\n", Name);
+    printf("---------------------------------------------\n");
+    if (DO_NP_CHAIN_OFFLOAD) {
+		printf("Init Data\t = %lu\n", TotalTime[0]/factor);
+		printf("Init Filters\t = %lu\n", TotalTime[1]/factor);
+		printf("Output Read\t = %lu\n", TotalTime[2]/factor);
+	} else if (DO_PP_CHAIN_OFFLOAD) {
+		if (isPsycho) {
+			printf("Psycho Init Data\t = %lu\n", TotalTime[0]/factor);
+			printf("Psycho Init Filters\t = %lu\n", TotalTime[1]/factor);
+			printf("Psycho Output Read\t = %lu\n", TotalTime[2]/factor);
+		} else {
+			printf("Binaur Init Data\t = %lu\n", TotalTime[3]/factor);
+			printf("Binaur Init Filters\t = %lu\n", TotalTime[4]/factor);
+			printf("Binaur Output Read\t = %lu\n", TotalTime[5]/factor);
 		}
 	}
 }

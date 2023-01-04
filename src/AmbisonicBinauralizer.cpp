@@ -152,5 +152,12 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
         printf("Binaur FIR\t = %lu\n", TotalTime[1]/factor);
         printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
     }
+
+    if (DO_NP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor);
+    } else if (DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor, false);
+    }
+
     printf("\n");
 }

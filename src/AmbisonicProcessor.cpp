@@ -96,6 +96,7 @@ void AmbisonicProcessor::updateRotation() {
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
     ShelfFilterOrder(pBFSrcDst, nSamples);
+	WriteScratchReg(0x77777777);
     if(m_nOrder >= 1) {
         StartCounter();
         ProcessOrder1_3D(pBFSrcDst, nSamples);
@@ -111,6 +112,7 @@ void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
         ProcessOrder3_3D(pBFSrcDst, nSamples);
         EndCounter(5);
     }
+	WriteScratchReg(0);
 }
 
 void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples)
@@ -367,5 +369,12 @@ void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
     printf("Rotate O1\t = %lu\n", TotalTime[3]/factor);
     printf("Rotate O2\t = %lu\n", TotalTime[4]/factor);
     printf("Rotate O3\t = %lu\n", TotalTime[5]/factor);
+
+    if (DO_NP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor);
+    } else if (DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor, true);
+    }
+
     printf("\n");
 }

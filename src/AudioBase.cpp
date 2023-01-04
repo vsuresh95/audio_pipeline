@@ -52,3 +52,13 @@ audio_t AudioBase::myRand() {
 	RandFactor = (RandFactor * RandFactor) % 10000;
 	return (audio_t) RandFactor / 4242.4242;
 }
+
+void AudioBase::WriteScratchReg(unsigned value) {
+	asm volatile (
+		"mv t0, %0;"
+		"csrrw t0, mscratch, t0"
+		:
+		: "r" (value)
+		: "t0", "t1", "memory"
+	);
+}

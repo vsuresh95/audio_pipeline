@@ -24,6 +24,7 @@ public:
     void EndCounter(unsigned Index);
     unsigned log2(unsigned product);
     audio_t myRand();
+    void WriteScratchReg(unsigned value);
 
     unsigned RandFactor;
 };

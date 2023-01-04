@@ -10,6 +10,8 @@
 #include <kiss_fftr.hpp>
 #include <BFormat.hpp>
 
+#include <AudioBase.hpp>
+
 // We need to convert from float to fixed, and vice-versa,
 // if we are using float for the CPU data, and fixed for
 // accelerator data. We use a precision of 4 integer bits
@@ -44,7 +46,7 @@
 #define FLT_READY_FLAG_OFFSET 8
 #define NUM_DEVICES 3
 
-class FFIChain {
+class FFIChain : public AudioBase {
 public:
     // Accelerator objects.
     FFTAcc FFTInst;
@@ -105,6 +107,8 @@ public:
 
     void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast);
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
+
+    void PrintTimeInfo(unsigned factor, bool isPsycho = true);
 };
 
 #endif // FFICHAIN_H
