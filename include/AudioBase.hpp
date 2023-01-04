@@ -18,15 +18,25 @@ public:
 
     char *Name;
 
+    unsigned RandFactor;
+
     AudioBase();
 
+    // Helper function to start timer, end timer and
+    // capture the difference in TotalTime[Index].
     void StartCounter();
     void EndCounter(unsigned Index);
-    unsigned log2(unsigned product);
-    audio_t myRand();
-    void WriteScratchReg(unsigned value);
 
-    unsigned RandFactor;
+    // Helper function to perform log2 using baremetal
+    unsigned log2(unsigned product);
+
+    // Helper function to generate pseudo-random numbers in baremetal
+    audio_t myRand();
+
+    // Helper function to write to an internal scratch register
+    // of the Ariane core (mscratch). These writes can be used
+    // to identify different phases of the application in waveform.
+    void WriteScratchReg(unsigned value);
 };
 
 #endif // AUDIOBASE_H

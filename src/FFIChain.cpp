@@ -129,6 +129,10 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 	unsigned FilterChannelsLeft = m_nChannelCount;
 	unsigned OutputChannelsLeft = m_nChannelCount;
 
+	// Check if any of the tasks are pending. If yes,
+	// check if any of them a ready, based on a simple priority.
+	// Once a task is complete, we reduce the number of tasks left
+	// for that respective task.
 	while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
 		if (InputChannelsLeft) {
 			// Wait for FFT (consumer) to be ready
@@ -184,6 +188,12 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 }
 
 void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+	// Check if any of the tasks are pending. If yes,
+	// check if any of them a ready, based on a simple priority.
+	// Once a task is complete, we reduce the number of tasks left
+	// for that respective task.
+	// Repeat this for both ears.
+	// There is scope for optimization here because the inputs don't change.
     for(unsigned niEar = 0; niEar < 2; niEar++) {
 		unsigned InputChannelsLeft = m_nChannelCount;
 		unsigned FilterChannelsLeft = m_nChannelCount;

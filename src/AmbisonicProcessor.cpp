@@ -291,6 +291,8 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     // All  channels are filtered using linear phase FIR filters.
     // In the case of the 0th order signal (W channel) this takes the form of a delay
     // For all other channels shelf filters are used
+
+    // Offload the entire task to be pipelined using shared memory.
     if (DO_PP_CHAIN_OFFLOAD) {
         StartCounter();
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;

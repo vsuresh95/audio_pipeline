@@ -80,6 +80,8 @@ public:
 	unsigned ProdRdyFlag;
 	unsigned ProdVldFlag;
 
+    // Data size parameters. These are set from the rotator's
+    // parameters in the configure phase.
     unsigned m_nChannelCount;
     unsigned m_nBlockSize;
     unsigned m_nFFTSize;
@@ -94,18 +96,49 @@ public:
     void ConfigureAcc();
     void StartAcc();
 
+    // Chain offload using regular accelerator invocation.
+    // Here, pBFSrcDst is the shared BFormat passed between
+    // tasks in the application.
+    // m_Filters is a pointer to array containing the filters
+    // for THIS CHANNEL ONLY.
+    // m_pfScratchBufferA is the output buffer.
+    // CurChannel is the current channel between operated on.
     void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
+
+    // Chain offload using shared memory accelerator invocation.
+    // Parameter definitions same as above.
     void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
 
+    // Copy twiddles factors (with format conversion) from
+    // super_twiddles to FIR's twiddle buffer.
     void InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles);
+
+    // Copy input data for FFT (with format conversion) from
+    // pBFSrcDst->m_ppfChannels to FFT's input buffer.
     void InitData(CBFormat* pBFSrcDst, unsigned niChannel);
+
+    // Copy FIR filters (with format conversion) from
+    // m_Filters to FIR's filter buffer.
     void InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters);
+
+    // Copy IFFT output (with format conversion) from
+    // IFFT's output buffer to m_pfScratchBufferA.
     void ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA);
 
+    // In case of pipelined operation, this function
+    // replaces ReadOutput. It performs ReadOutput,
+    // as well as the overlap operation.
     void PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigned CurChannel);
+
+    // Handle pipelined operation of psycho-acoustic filter.
     void PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
 
+    // In case of pipelined operation, this function
+    // replaces ReadOutput. It performs ReadOutput,
+    // as well as the overlap operation.
     void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast);
+
+    // Handle pipelined operation of binauralizer filter.
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
     void PrintTimeInfo(unsigned factor, bool isPsycho = true);

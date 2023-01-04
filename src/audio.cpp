@@ -28,8 +28,8 @@ void ABAudio::Configure() {
 
     // Hardware acceleration
     // 1. Regular invocation chain
-    // 2. Shared memory invocation chain
-    if (DO_CHAIN_OFFLOAD) {
+    // 2. Shared memory invocation chain - non-pipelined or pipelined
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
@@ -47,26 +47,12 @@ void ABAudio::Configure() {
 
     	// Write input data for psycho twiddle factors
     	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
-    } else if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        // Configure accelerator parameters and write them to accelerator registers,
-        // and start the accelerators (to start polling).
-        FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
-        FFIChainInst.ConfigureAcc();
+    }
+    
+    // For shared memory invocation cases, we can
+    // start the accelerators (to start polling).
+    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.StartAcc();
-
-        // Assign size parameters that is used for data store and load loops
-        FFIChainInst.m_nChannelCount = rotator.m_nChannelCount;
-        FFIChainInst.m_fFFTScaler = rotator.m_fFFTScaler;
-        FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
-        FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
-        FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
-
-        // Assign the configured accelerator object to both rotator and decoder.
-        rotator.FFIChainInst = FFIChainInst;
-        decoder.FFIChainInst = FFIChainInst;
-
-    	// Write input data for psycho twiddle factors.
-    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
     }
 }
 

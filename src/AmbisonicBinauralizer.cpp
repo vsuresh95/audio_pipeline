@@ -81,6 +81,8 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
 
     // Perform the convolution on both ears. Potentially more realistic results but requires double the number of
     // convolutions.
+
+    // Offload the entire task to be pipelined using shared memory.
     if (DO_PP_CHAIN_OFFLOAD) {
         StartCounter();
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;

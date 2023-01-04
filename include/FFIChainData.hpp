@@ -127,6 +127,9 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 	// We coalesce 4B elements to 8B accesses for 2 reasons:
 	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
 	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+
+	// First, we copy the output, scale it and account for the overlap
+	// data from the previous block, for the same channel.
 	for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
@@ -140,6 +143,7 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		write_mem((void *) dst, DstData.value_64);
 	}
 
+	// Second, we simply copy the output (with scaling) as we are outside the overlap range.
 	for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
@@ -154,6 +158,8 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 
 	overlap_dst = m_pfOverlap[CurChannel];
 
+	// Last, we copy our output (with scaling) directly to the overlap buffer only.
+	// This data will be used in the first loop for the next audio block.
 	for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
@@ -180,6 +186,13 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 	// We coalesce 4B elements to 8B accesses for 2 reasons:
 	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
 	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+
+	// The binauralizer is different from the psycho-acoustic filter in that
+	// the output data from all channels for a single ear are summed together
+	// before the overlap operation after the last channel.
+
+	// We check if this is the last channel for that ear. If yes, we need
+	// to perform overlap operation for the output.
 	if (isLast)
 	{
 		// See init_params() for memory layout.
@@ -187,6 +200,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		dst = ppfDst;
 		overlap_dst = m_pfOverlap;
 
+		// First, we copy the output, scale it, sum it to the earlier sum,
+		// and account for the overlap data from the previous block, for the same channel.
 		for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
@@ -201,6 +216,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			write_mem((void *) dst, DstData.value_64);
 		}
 
+		// Second, we simply copy the output (with scaling), sum it
+		// with the previous outputs, as we are outside the overlap range.
 		for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
@@ -216,6 +233,9 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 
 		overlap_dst = m_pfOverlap;
 
+		// Last, we copy our output (with scaling), sum it with the
+		// previous output, directly to the overlap buffer only.
+		// This data will be used in the first loop for the next audio block.
 		for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
@@ -233,6 +253,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		src = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
 		dst = ppfDst;
 
+		// Here, we simply copy the output, sum it with the previous outputs.
 		for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
