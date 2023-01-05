@@ -2,6 +2,11 @@
 #include <cstring>
 #include <AmbisonicProcessor.hpp>
 
+#if (USE_REAL_DATA == 1)
+#include <m_ppcpPsychFilters.hpp>
+#include <RotationParams.hpp>
+#endif // USE_REAL_DATA
+
 void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     Name = (char *) "PSYCHOACOUSTIC FILTER";
 
@@ -67,13 +72,38 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     // instead of calculating them as in the Linux app.
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
+        #if (USE_REAL_DATA == 1)
+            m_ppcpPsychFilters[niChannel][niSample].r = Orig_m_ppcpPsychFilters[niChannel][2*niSample];
+            m_ppcpPsychFilters[niChannel][niSample].i = Orig_m_ppcpPsychFilters[niChannel][2*niSample+1];
+        #else
             m_ppcpPsychFilters[niChannel][niSample].r = myRand();
             m_ppcpPsychFilters[niChannel][niSample].i = myRand();
+        #endif
         }
     }
 }
 
 void AmbisonicProcessor::updateRotation() {
+#if (USE_REAL_DATA == 1)
+    m_fCosAlpha = Orig_RotationParams[0];
+    m_fSinAlpha = Orig_RotationParams[1];
+    m_fCosBeta = Orig_RotationParams[2];
+    m_fSinBeta = Orig_RotationParams[3];
+    m_fCosGamma = Orig_RotationParams[4];
+    m_fSinGamma = Orig_RotationParams[5];
+    m_fCos2Alpha = Orig_RotationParams[6];
+    m_fSin2Alpha = Orig_RotationParams[7];
+    m_fCos2Beta = Orig_RotationParams[8];
+    m_fSin2Beta = Orig_RotationParams[9];
+    m_fCos2Gamma = Orig_RotationParams[10];
+    m_fSin2Gamma = Orig_RotationParams[11];
+    m_fCos3Alpha = Orig_RotationParams[12];
+    m_fSin3Alpha = Orig_RotationParams[13];
+    m_fCos3Beta = Orig_RotationParams[14];
+    m_fSin3Beta = Orig_RotationParams[15];
+    m_fCos3Gamma = Orig_RotationParams[16];
+    m_fSin3Gamma = Orig_RotationParams[17];
+#else
     m_fCosAlpha = myRand();
     m_fSinAlpha = myRand();
     m_fCosBeta = myRand();
@@ -92,6 +122,7 @@ void AmbisonicProcessor::updateRotation() {
     m_fSin3Beta = myRand();
     m_fCos3Gamma = myRand();
     m_fSin3Gamma = myRand();
+#endif
 }
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {

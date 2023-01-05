@@ -8,6 +8,8 @@
 #include <AmbisonicZoomer.hpp>
 #include <AudioBase.hpp>
 
+const float ERR_TH = 0.05;
+
 class ABAudio : public AudioBase {
 public:
     void Configure();

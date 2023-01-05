@@ -2,6 +2,12 @@
 #include <math.h>
 #include <AmbisonicZoomer.hpp>
 
+#if (USE_REAL_DATA == 1)
+#include <m_AmbEncoderFront.hpp>
+#include <m_AmbEncoderFront_weighted.hpp>
+#include <ZoomerParams.hpp>
+#endif // USE_REAL_DATA
+
 void AmbisonicZoomer::Configure(unsigned nChannels) {
     Name = (char *) "ZOOMER";
 
@@ -13,17 +19,29 @@ void AmbisonicZoomer::Configure(unsigned nChannels) {
     m_AmbEncoderFront_weighted = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
 
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
+    #if (USE_REAL_DATA == 1)
+        m_AmbEncoderFront[niChannel] = Orig_m_AmbEncoderFront[niChannel];
+        m_AmbEncoderFront_weighted[niChannel] = Orig_m_AmbEncoderFront[niChannel];
+    #else
         m_AmbEncoderFront[niChannel] = myRand();
         m_AmbEncoderFront_weighted[niChannel] = myRand();
+    #endif
     }
 }
 
 void AmbisonicZoomer::updateZoom() {
     // Limit the zoom value to always preserve the spacial effect.
+#if (USE_REAL_DATA == 1)
+    m_fZoom = Orig_m_fZoom; 
+    m_fZoomRed = Orig_m_fZoomRed;
+    m_fZoomBlend = Orig_m_fZoomBlend;
+    m_AmbFrontMic = Orig_m_AmbFrontMic;
+#else
     m_fZoom = myRand(); 
     m_fZoomRed = myRand();
     m_fZoomBlend = myRand();
     m_AmbFrontMic = myRand();
+#endif
 }
 
 void AmbisonicZoomer::Process(CBFormat *pBFSrcDst, unsigned nSamples)

@@ -10,6 +10,12 @@ extern "C" {
 #include <esp_probe.h>
 }
 
+typedef union
+{
+    float Flt;
+    unsigned Int;
+} print_float_t;
+
 class AudioBase {
 public:
     unsigned long long StartTime;
