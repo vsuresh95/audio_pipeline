@@ -1,6 +1,11 @@
 #include <audio.hpp>
 #include <cstring>
 
+#if (USE_REAL_DATA == 1)
+#include <m_ppfChannels.hpp>
+#include <resultSample.hpp>
+#endif // USE_REAL_DATA
+
 void ABAudio::Configure() {
     Name = (char *) "AUDIO";
 
@@ -67,7 +72,11 @@ void ABAudio::processBlock() {
 	WriteScratchReg(0x1);
     for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
         for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
+            #if (USE_REAL_DATA == 1)
+            sumBF.m_ppfChannels[niChannel][niSample] = Orig_m_ppfChannels[niChannel][niSample];
+            #else
             sumBF.m_ppfChannels[niChannel][niSample] = myRand();
+            #endif
         }
     }
 	WriteScratchReg(0);
@@ -92,6 +101,32 @@ void ABAudio::processBlock() {
     StartCounter();
     decoder.Process(&sumBF, resultSample);
     EndCounter(2);
+
+#if (USE_REAL_DATA == 1)
+    unsigned error_cnt = 0;
+    
+    print_float_t Actual; 
+    print_float_t Expected;
+
+    for(unsigned niChannel = 0; niChannel < 2; niChannel++) {
+        for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
+            Actual.Flt = resultSample[niChannel][niSample];
+            Expected.Flt = Orig_resultSample[niChannel][niSample];
+
+            if ((fabs(Expected.Flt - Actual.Flt) / fabs(Expected.Flt)) > ERR_TH) {
+			    error_cnt++;
+                printf("Error at %d %d A = %x, E = %x\n", niChannel, niSample, Actual.Int, Expected.Int);
+            }
+        }
+    }
+
+    if (error_cnt) {
+        printf("TEST FAIL = %d\n", error_cnt);
+    } else {
+        printf("TEST PASS\n");
+    }
+#endif // USE_REAL_DATA
+
 }
 
 void ABAudio::PrintTimeInfo(unsigned factor) {

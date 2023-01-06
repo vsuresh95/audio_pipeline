@@ -2,13 +2,21 @@
 #include <cstring>
 #include <AmbisonicBinauralizer.hpp>
 
+#if (USE_REAL_DATA == 1)
+#include <m_ppcpFilters.hpp>
+#endif // USE_REAL_DATA
+
 void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize, unsigned nChannels) {
     Name = (char *) "BINAURALIZER";
 
     m_nChannelCount = nChannels;
 
     // Hard-coded based on observations from Linux app.
-    m_nTaps = 141;
+    if (USE_REAL_DATA == 1) {
+        m_nTaps = 140;
+    } else {
+        m_nTaps = 141;
+    }
     
     m_nBlockSize = nBlockSize;
 
@@ -66,8 +74,13 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
     for(unsigned niEar = 0; niEar < 2; niEar++) {
         for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
             for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
+            #if (USE_REAL_DATA == 1)
+                m_ppcpFilters[niEar][niChannel][niSample].r = Orig_m_ppcpFilters[niEar][niChannel][2*niSample];
+                m_ppcpFilters[niEar][niChannel][niSample].i = Orig_m_ppcpFilters[niEar][niChannel][2*niSample+1];
+            #else
                 m_ppcpFilters[niEar][niChannel][niSample].r = myRand();
                 m_ppcpFilters[niEar][niChannel][niSample].i = myRand();
+            #endif
             }
         }
     }
