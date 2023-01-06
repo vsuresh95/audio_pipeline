@@ -64,11 +64,13 @@ void ABAudio::loadSource() {
 void ABAudio::processBlock() {
     // Initialize audio source data. Since we're not reading an actual audio
     // source file, we initialize we random data.
+	WriteScratchReg(0x1);
     for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
         for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
             sumBF.m_ppfChannels[niChannel][niSample] = myRand();
         }
     }
+	WriteScratchReg(0);
 
     // First, we update the rotation parameters. In the bare metal app, we use
     // random numbers. Then, we perform psycho-acoustic filtering and 3D rotation.
@@ -79,7 +81,7 @@ void ABAudio::processBlock() {
 
     // First, we update the zoomer parameters. In the bare metal app, we use
     // random numbers. Then, we perform zoomer process.
-	WriteScratchReg(0x88888888);
+	WriteScratchReg(0x80);
     StartCounter();
     zoomer.updateZoom();
     zoomer.Process(&sumBF, BLOCK_SIZE);

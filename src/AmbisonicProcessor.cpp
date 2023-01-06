@@ -96,17 +96,21 @@ void AmbisonicProcessor::updateRotation() {
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
     ShelfFilterOrder(pBFSrcDst, nSamples);
-	WriteScratchReg(0x77777777);
+	WriteScratchReg(0x10);
     if(m_nOrder >= 1) {
         StartCounter();
         ProcessOrder1_3D(pBFSrcDst, nSamples);
         EndCounter(3);
     }
+	WriteScratchReg(0);
+	WriteScratchReg(0x20);
     if(m_nOrder >= 2) {
         StartCounter();
         ProcessOrder2_3D(pBFSrcDst, nSamples);
         EndCounter(4);
     }
+	WriteScratchReg(0);
+	WriteScratchReg(0x40);
     if(m_nOrder >= 3) {
         StartCounter();
         ProcessOrder3_3D(pBFSrcDst, nSamples);

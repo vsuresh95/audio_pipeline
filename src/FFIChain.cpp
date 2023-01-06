@@ -139,7 +139,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 			if (sm_sync[ConsRdyFlag] == 1) {
 				sm_sync[ConsRdyFlag] = 0;
 				// Write input data for FFT
-				WriteScratchReg(0x11111111);
+				WriteScratchReg(0x2);
         		StartCounter();
 				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
         		EndCounter(0);
@@ -158,7 +158,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
             	unsigned iChannelOrder = int(sqrt(m_nChannelCount - FilterChannelsLeft));
 
 				// Write input data for filters
-				WriteScratchReg(0x22222222);
+				WriteScratchReg(0x4);
         		StartCounter();
 				InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
         		EndCounter(1);
@@ -174,7 +174,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 			if (sm_sync[ProdVldFlag] == 1) {
 				sm_sync[ProdVldFlag] = 0;
 				// Read back output
-				WriteScratchReg(0x33333333);
+				WriteScratchReg(0x8);
         		StartCounter();
 				PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - OutputChannelsLeft);
         		EndCounter(2);
@@ -205,7 +205,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[ConsRdyFlag] == 1) {
 					sm_sync[ConsRdyFlag] = 0;
 					// Write input data for FFT
-					WriteScratchReg(0x44444444);
+					WriteScratchReg(0x100);
         			StartCounter();
 					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
         			EndCounter(3);
@@ -221,7 +221,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[FltRdyFlag] == 1) {
 					sm_sync[FltRdyFlag] = 0;
 					// Write input data for filters
-					WriteScratchReg(0x55555555);
+					WriteScratchReg(0x200);
         			StartCounter();
 					InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - FilterChannelsLeft]);
         			EndCounter(4);
@@ -237,7 +237,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 				if (sm_sync[ProdVldFlag] == 1) {
 					sm_sync[ProdVldFlag] = 0;
 					// Read back output
-					WriteScratchReg(0x66666666);
+					WriteScratchReg(0x400);
         			StartCounter();
 					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
         			EndCounter(5);
