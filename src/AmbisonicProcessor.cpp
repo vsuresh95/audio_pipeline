@@ -70,7 +70,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
 
     // Initialize Psychoacoustic filter values. We intitialize random data
     // instead of calculating them as in the Linux app.
-#ifndef NO_DATA_INIT
+#if (DO_DATA_INIT == 1)
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
         #if (USE_REAL_DATA == 1)

@@ -9,7 +9,7 @@ typedef float audio_t;
 
 typedef int device_t;
 
-#ifndef NO_DATA_INIT
+#if (DO_DATA_INIT == 1)
 #define MyMemset memset
 #else
 #define MyMemset
