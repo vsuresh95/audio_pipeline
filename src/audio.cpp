@@ -22,8 +22,8 @@ void ABAudio::Configure() {
     resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
     resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
     resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-    memset(resultSample[0], 0, BLOCK_SIZE * sizeof(audio_t));
-    memset(resultSample[1], 0, BLOCK_SIZE * sizeof(audio_t));
+    MyMemset(resultSample[0], 0, BLOCK_SIZE * sizeof(audio_t));
+    MyMemset(resultSample[1], 0, BLOCK_SIZE * sizeof(audio_t));
 
     // Configure and initialize parameters for Bformat data object,
     // which holds the data for each channel throughout the pipeline.

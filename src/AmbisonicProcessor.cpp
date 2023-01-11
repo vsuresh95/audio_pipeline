@@ -35,7 +35,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
 
     // Scratch buffer for rotate order - set to 0.
     m_pfTempSample = (audio_t *) aligned_malloc(m_nChannelCount * sizeof(audio_t));
-    memset(m_pfTempSample, 0, m_nChannelCount * sizeof(audio_t));
+    MyMemset(m_pfTempSample, 0, m_nChannelCount * sizeof(audio_t));
 
     // Allocate buffers for overlap operation.
     // In psycho-acoustic filter, the overlap operation stores overlap
@@ -44,16 +44,16 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_pfOverlap = (audio_t **) aligned_malloc(m_nChannelCount * sizeof(audio_t *));
     for(unsigned i = 0; i < m_nChannelCount; i++) {
         m_pfOverlap[i] = (audio_t *) aligned_malloc(m_nOverlapLength * sizeof(audio_t));
-        memset(m_pfOverlap[i], 0, m_nOverlapLength * sizeof(audio_t));
+        MyMemset(m_pfOverlap[i], 0, m_nOverlapLength * sizeof(audio_t));
     }
 
     // Scratch buffer to hold the time domain samples - set to 0.
     m_pfScratchBufferA = (audio_t *) aligned_malloc(m_nFFTSize * sizeof(audio_t));
-    memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
+    MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
 
     // Scratch buffer to hold the frequency domain samples - set to 0.
     m_pcpScratch = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
-    memset(m_pcpScratch, 0, m_nFFTBins * sizeof(kiss_fft_cpx));
+    MyMemset(m_pcpScratch, 0, m_nFFTBins * sizeof(kiss_fft_cpx));
 
     // Allocate FFT and iFFT for new size - includes twiddle factor allocation.
     m_pFFT_psych_cfg = kiss_fftr_alloc(m_nFFTSize, 0, 0, 0);
@@ -65,11 +65,12 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
     m_ppcpPsychFilters = (kiss_fft_cpx **) aligned_malloc((NORDER+1) * sizeof(kiss_fft_cpx *));
     for(unsigned i = 0; i < NORDER+1; i++) {
         m_ppcpPsychFilters[i] = (kiss_fft_cpx *) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
-        memset(m_ppcpPsychFilters[i], 0, m_nFFTBins * sizeof(kiss_fft_cpx));
+        MyMemset(m_ppcpPsychFilters[i], 0, m_nFFTBins * sizeof(kiss_fft_cpx));
     }
 
     // Initialize Psychoacoustic filter values. We intitialize random data
     // instead of calculating them as in the Linux app.
+#ifndef NO_DATA_INIT
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
         #if (USE_REAL_DATA == 1)
@@ -81,6 +82,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
         #endif
         }
     }
+#endif
 }
 
 void AmbisonicProcessor::updateRotation() {
@@ -334,7 +336,7 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
         FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
         EndCounter(0);
     } else {
-        memset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
+        MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
 
         for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
         {
@@ -354,7 +356,7 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
                 EndCounter(0);
             } else {
                 memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-                memset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+                MyMemset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
                 StartCounter();
                 kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);

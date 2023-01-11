@@ -9,4 +9,10 @@ typedef float audio_t;
 
 typedef int device_t;
 
+#ifndef NO_DATA_INIT
+#define MyMemset memset
+#else
+#define MyMemset
+#endif
+
 #endif // DATA_TYPE_H
