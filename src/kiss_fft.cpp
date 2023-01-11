@@ -336,6 +336,7 @@ kiss_fft_cfg kiss_fft_alloc(int nfft, int inverse_fft, void *mem, unsigned *lenm
         st->inverse = inverse_fft;
 
         /// TODO: Update super_twiddles and factors with appropriate values
+#if (DO_DATA_INIT == 1)
         for (i = 0;i < nfft; ++i) {
             const double pi = 3.141592653589793238462643383279502884197169399375105820974944;
             double phase = -2*pi*i / nfft;
@@ -345,6 +346,7 @@ kiss_fft_cfg kiss_fft_alloc(int nfft, int inverse_fft, void *mem, unsigned *lenm
         }
 
         kf_factor(nfft,st->factors);
+#endif
     }
     return st;
 }
