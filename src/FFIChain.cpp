@@ -71,9 +71,9 @@ void FFIChain::StartAcc() {
 	IFFTInst.StartAcc();
 }
 
-void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {
+void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
 	// Write input data for FFT.
-	InitData(pBFSrcDst, CurChannel);
+	InitData(pBFSrcDst, CurChannel, IsInit);
 	// Write input data for FIR filters.
 	InitFilters(pBFSrcDst, m_Filters);
 
@@ -89,14 +89,14 @@ void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audi
 	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
 }
 
-void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel) {
+void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
 	// Wait for FFT (consumer) to be ready.
 	while (sm_sync[ConsRdyFlag] != 1);
 	// Reset flag for next iteration.
 	sm_sync[ConsRdyFlag] = 0;
 	// Write input data for FFT.
     StartCounter();
-	InitData(pBFSrcDst, CurChannel);
+	InitData(pBFSrcDst, CurChannel, IsInit);
     EndCounter(0);
 	// Inform FFT (consumer) to start.
 	sm_sync[ConsVldFlag] = 1;
@@ -141,7 +141,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 				// Write input data for FFT
 				WriteScratchReg(0x2);
         		StartCounter();
-				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, true);
         		EndCounter(0);
 				WriteScratchReg(0);
 				// Inform FFT (consumer)
@@ -207,7 +207,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 					// Write input data for FFT
 					WriteScratchReg(0x100);
         			StartCounter();
-					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft);
+					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, false);
         			EndCounter(3);
 					WriteScratchReg(0);
 					// Inform FFT (consumer)

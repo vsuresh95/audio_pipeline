@@ -1,7 +1,7 @@
 #ifndef FFI_CHAIN_DATA
 #define FFI_CHAIN_DATA
 
-void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
+void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) {
 	int InitLength = m_nBlockSize;
 	audio_token_t SrcData;
 	audio_t* src;
@@ -15,16 +15,27 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel) {
 	// We coalesce 4B elements to 8B accesses for 2 reasons:
 	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
 	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+	if (IsInit) {
+		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
+		{
+			DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
+			DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
 
-		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
+			// Need to cast to void* for extended ASM code.
+			write_mem((void *) dst, DstData.value_64);
+		}
+	} else {
+		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
+		{
+			// Need to cast to void* for extended ASM code.
+			SrcData.value_64 = read_mem((void *) src);
 
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+			DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+			DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
+
+			// Need to cast to void* for extended ASM code.
+			write_mem((void *) dst, DstData.value_64);
+		}
 	}
 }
 

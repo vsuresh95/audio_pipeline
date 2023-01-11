@@ -103,11 +103,11 @@ public:
     // for THIS CHANNEL ONLY.
     // m_pfScratchBufferA is the output buffer.
     // CurChannel is the current channel between operated on.
-    void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
+    void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
 
     // Chain offload using shared memory accelerator invocation.
     // Parameter definitions same as above.
-    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel);
+    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
 
     // Copy twiddles factors (with format conversion) from
     // super_twiddles to FIR's twiddle buffer.
@@ -115,7 +115,7 @@ public:
 
     // Copy input data for FFT (with format conversion) from
     // pBFSrcDst->m_ppfChannels to FFT's input buffer.
-    void InitData(CBFormat* pBFSrcDst, unsigned niChannel);
+    void InitData(CBFormat* pBFSrcDst, unsigned niChannel, bool IsInit);
 
     // Copy FIR filters (with format conversion) from
     // m_Filters to FIR's filter buffer.

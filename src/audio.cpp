@@ -70,15 +70,13 @@ void ABAudio::processBlock() {
     // Initialize audio source data. Since we're not reading an actual audio
     // source file, we initialize we random data.
 	WriteScratchReg(0x1);
+    #if (USE_REAL_DATA == 1)
     for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
         for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
-            #if (USE_REAL_DATA == 1)
             sumBF.m_ppfChannels[niChannel][niSample] = Orig_m_ppfChannels[niChannel][niSample];
-            #else
-            sumBF.m_ppfChannels[niChannel][niSample] = myRand();
-            #endif
         }
     }
+    #endif
 	WriteScratchReg(0);
 
     // First, we update the rotation parameters. In the bare metal app, we use

@@ -345,12 +345,12 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
             if (DO_CHAIN_OFFLOAD) {
                 StartCounter();
                 FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                FFIChainInst.RegularProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);
+                FFIChainInst.RegularProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel, true);
                 EndCounter(0);
             } else if (DO_NP_CHAIN_OFFLOAD) {
                 StartCounter();
                 FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel);
+                FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel, true);
                 EndCounter(0);
             } else {
                 memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
