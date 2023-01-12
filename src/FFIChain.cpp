@@ -142,6 +142,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 				WriteScratchReg(0x2);
         		StartCounter();
 				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, true);
+    			asm volatile ("fence w, w");
         		EndCounter(0);
 				WriteScratchReg(0);
 				// Inform FFT (consumer)
@@ -161,6 +162,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 				WriteScratchReg(0x4);
         		StartCounter();
 				InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+    			asm volatile ("fence w, w");
         		EndCounter(1);
 				WriteScratchReg(0);
 				// Inform FIR (consumer)
@@ -177,6 +179,7 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 				WriteScratchReg(0x8);
         		StartCounter();
 				PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - OutputChannelsLeft);
+    			asm volatile ("fence w, w");
         		EndCounter(2);
 				WriteScratchReg(0);
 				// Inform IFFT (producer)
@@ -208,6 +211,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 					WriteScratchReg(0x100);
         			StartCounter();
 					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, false);
+    				asm volatile ("fence w, w");
         			EndCounter(3);
 					WriteScratchReg(0);
 					// Inform FFT (consumer)
@@ -224,6 +228,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 					WriteScratchReg(0x200);
         			StartCounter();
 					InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - FilterChannelsLeft]);
+    				asm volatile ("fence w, w");
         			EndCounter(4);
 					WriteScratchReg(0);
 					// Inform FIR (consumer)
@@ -240,6 +245,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 					WriteScratchReg(0x400);
         			StartCounter();
 					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
+    				asm volatile ("fence w, w");
         			EndCounter(5);
 					WriteScratchReg(0);
 					// Inform IFFT (producer)
