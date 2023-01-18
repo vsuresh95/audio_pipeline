@@ -97,8 +97,9 @@ void FFIChain::InitParams() {
 	// 4*acc_size - 5*acc_size: Unused
 	// 5*acc_size - 7*acc_size: FIR filters
 	// 7*acc_size - 7*acc_size: Twiddle factors
-	// Therefore, NUM_DEVICES+5 = 8.
-    mem_size = acc_size * NUM_DEVICES+5;
+	// 8*acc_size - 9*acc_size: DMA input
+	// Therefore, NUM_DEVICES+7 = 10.
+    mem_size = acc_size * NUM_DEVICES+7;
 
 	// Helper flags for sync flags that the CPU needs to access.
 	// We add a pair of sync flags for FIR filter weights, so that
@@ -109,6 +110,8 @@ void FFIChain::InitParams() {
 	FltVldFlag = 1*acc_len + FLT_VALID_FLAG_OFFSET;
 	ProdRdyFlag = 3*acc_len + READY_FLAG_OFFSET;
 	ProdVldFlag = 3*acc_len + VALID_FLAG_OFFSET;
+	DMARdyFlag = 8*acc_len + READY_FLAG_OFFSET;
+	DMAVldFlag = 8*acc_len + VALID_FLAG_OFFSET;
 }
 
 void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {

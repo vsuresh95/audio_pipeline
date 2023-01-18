@@ -46,19 +46,26 @@ void ABAudio::Configure() {
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
 
+    	// Write input data for psycho twiddle factors
+    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
+    
+        // For shared memory invocation cases, we can
+        // start the accelerators (to start polling).
+        if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+            FFIChainInst.StartAcc();
+
+            // Use the DMA to load all inputs and filter weights
+            // into its private scratchpad.
+            if (USE_AUDIO_DMA) {
+                FFIChainInst.ConfigureDMA();
+            }
+        }
+
         // Assign the configured accelerator object to both rotator and decoder.
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
+    }
 
-    	// Write input data for psycho twiddle factors
-    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
-    }
-    
-    // For shared memory invocation cases, we can
-    // start the accelerators (to start polling).
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.StartAcc();
-    }
 }
 
 void ABAudio::loadSource() {

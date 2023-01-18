@@ -8,6 +8,7 @@ extern "C" {
 #include <FFIChain.hpp>
 #include <FFIChainHelper.hpp>
 #include <FFIChainData.hpp>
+#include <FFIChainDMA.hpp>
 
 void FFIChain::ConfigureAcc() {
     Name = (char *) "FFI CHAIN";

@@ -333,7 +333,11 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     if (DO_PP_CHAIN_OFFLOAD) {
         StartCounter();
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        if (USE_AUDIO_DMA) {
+            FFIChainInst.PsychoProcessDMA(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        } else {
+            FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        }
         EndCounter(0);
     } else {
         MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));

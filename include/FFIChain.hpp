@@ -12,6 +12,8 @@
 
 #include <AudioBase.hpp>
 
+#include <DMAAcc.hpp>
+
 // We need to convert from float to fixed, and vice-versa,
 // if we are using float for the CPU data, and fixed for
 // accelerator data. We use a precision of 4 integer bits
@@ -53,8 +55,11 @@ public:
     FIRAcc FIRInst;
     FFTAcc IFFTInst;
 
+    // Instance of DMA accelerator to offload data movements
+    DMAAcc DMAInst;
+
     // Buffer pointers.
-    device_t*mem;
+    device_t *mem;
     unsigned **ptable;
     volatile device_t* sm_sync;
 
@@ -68,6 +73,7 @@ public:
     unsigned mem_size;
     unsigned acc_len;
     unsigned acc_size;
+    unsigned dma_offset;
      
     spandex_config_t SpandexConfig;
     unsigned CoherenceMode;
@@ -79,6 +85,8 @@ public:
 	unsigned FltVldFlag;
 	unsigned ProdRdyFlag;
 	unsigned ProdVldFlag;
+	unsigned DMARdyFlag;
+	unsigned DMAVldFlag;
 
     // Data size parameters. These are set from the rotator's
     // parameters in the configure phase.
@@ -142,6 +150,15 @@ public:
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
     void PrintTimeInfo(unsigned factor, bool isPsycho = true);
+
+    // Configure class parameters of the DMA.
+    void ConfigureDMA();
+
+    // Handle pipelined operation of psycho-acoustic filter, with DMA.
+    void PsychoProcessDMA(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
+
+    // Handle pipelined operation of binauralizer filter, with DMA.
+    void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 };
 
 #endif // FFICHAIN_H

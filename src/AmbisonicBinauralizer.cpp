@@ -101,7 +101,11 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
     if (DO_PP_CHAIN_OFFLOAD) {
         StartCounter();
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        if (USE_AUDIO_DMA) {
+            FFIChainInst.BinaurProcessDMA(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        } else {
+            FFIChainInst.BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        }
         EndCounter(0);
     } else {
         for(niEar = 0; niEar < 2; niEar++)
