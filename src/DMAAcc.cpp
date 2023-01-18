@@ -45,6 +45,10 @@ void DMAAcc::ConfigureAcc() {
 	sm_sync[dma_offset + LOAD_STORE_FLAG_OFFSET] = 0;
 }
 
+void DMAAcc::ConfigureSPXRegister() {
+	iowrite32(DMADev, SPANDEX_REG, SpandexReg);
+}
+
 void DMAAcc::StartAcc() {
 	// Start accelerators
 	iowrite32(DMADev, CMD_REG, CMD_MASK_START);
@@ -79,9 +83,11 @@ void DMAAcc::LoadAllData() {
         // Reset flag for next iteration.
 	    sm_sync[dma_offset + READY_FLAG_OFFSET] = 0;
 
+		#if (DO_DATA_INIT == 1)
         for(unsigned niSample = 0; niSample < m_nBlockSize; niSample++) {
             mem[dma_offset + (2 * SYNC_VAR_SIZE) + niSample] = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
         }
+		#endif
 
         // We increment the scratchpad offset every iteration.
 	    sm_sync[dma_offset + RD_SP_OFFSET] = niChannel * m_nBlockSize;
@@ -102,9 +108,11 @@ void DMAAcc::LoadAllData() {
         // Reset flag for next iteration.
 	    sm_sync[dma_offset + READY_FLAG_OFFSET] = 0;
 
+		#if (DO_DATA_INIT == 1)
         for(unsigned niSample = 0; niSample < 2 * m_nFFTBins; niSample++) {
             mem[dma_offset + (2 * SYNC_VAR_SIZE) + niSample] = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
         }
+		#endif
 
         // We increment the scratchpad offset every iteration.
 	    sm_sync[dma_offset + RD_SP_OFFSET] = init_data_offset + niChannel * 2 * m_nFFTBins;
@@ -124,9 +132,11 @@ void DMAAcc::LoadAllData() {
             // Reset flag for next iteration.
             sm_sync[dma_offset + READY_FLAG_OFFSET] = 0;
 
+			#if (DO_DATA_INIT == 1)
             for(unsigned niSample = 0; niSample < 2 * m_nFFTBins; niSample++) {
                 mem[dma_offset + (2 * SYNC_VAR_SIZE) + niSample] = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
             }
+			#endif
 
             // We increment the scratchpad offset every iteration.
 	        sm_sync[dma_offset + RD_SP_OFFSET] = psycho_filters_offset + ((niEar * m_nChannelCount + niChannel) * 2 * m_nFFTBins);

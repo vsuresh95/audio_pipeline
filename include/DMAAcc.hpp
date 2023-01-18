@@ -97,6 +97,8 @@ public:
 
     void ConfigureAcc();
 
+    void ConfigureSPXRegister();
+
     void StartAcc();
 
     void TerminateAcc();
