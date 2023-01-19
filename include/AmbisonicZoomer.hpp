@@ -20,6 +20,7 @@ public:
     void updateZoom();
 
     void Process(CBFormat *pBFSrcDst, unsigned nSamples);
+    void ProcessOptimized(CBFormat *pBFSrcDst, unsigned nSamples);
 };
 
 #endif // ZOOMER_H

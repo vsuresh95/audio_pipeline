@@ -98,7 +98,7 @@ void ABAudio::processBlock() {
 	WriteScratchReg(0x80);
     StartCounter();
     zoomer.updateZoom();
-    zoomer.Process(&sumBF, BLOCK_SIZE);
+    zoomer.ProcessOptimized(&sumBF, BLOCK_SIZE);
     EndCounter(1);
 	WriteScratchReg(0);
 
