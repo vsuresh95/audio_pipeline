@@ -39,6 +39,11 @@ void DMAAcc::ConfigureAcc() {
 	/* <<--regs-config-->> */
 	iowrite32(DMADev, AUDIO_DMA_START_OFFSET_REG, 8 * acc_len);
 
+	// Zero out sync region.
+	for (unsigned sync_index = 0; sync_index < 2 * SYNC_VAR_SIZE; sync_index++) {
+		sm_sync[dma_offset + sync_index] = 0;
+	}
+
 	// Reset all sync variables to default values.
 	sm_sync[dma_offset + VALID_FLAG_OFFSET] = 0;
 	sm_sync[dma_offset + READY_FLAG_OFFSET] = 1;
@@ -140,6 +145,10 @@ void DMAAcc::LoadAllData() {
 
             // We increment the scratchpad offset every iteration.
 	        sm_sync[dma_offset + RD_SP_OFFSET] = psycho_filters_offset + ((niEar * m_nChannelCount + niChannel) * 2 * m_nFFTBins);
+
+			if (niEar == 1 && niChannel == m_nChannelCount - 1) {
+				sm_sync[dma_offset + LOAD_STORE_FLAG_OFFSET] = 2;
+			}
 
 	        // Inform DMA (consumer) to start.
 	        sm_sync[dma_offset + VALID_FLAG_OFFSET] = 1;

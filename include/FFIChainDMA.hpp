@@ -25,10 +25,13 @@ void FFIChain::ConfigureDMA() {
 	DMAInst.ConfigureAcc();
 	DMAInst.StartAcc();
 	DMAInst.LoadAllData();
+	DMAInst.TerminateAcc();
 
 	DMAInst.SpandexReg = SpandexConfig.spandex_reg;
 
+	DMAInst.ConfigureAcc();
 	DMAInst.ConfigureSPXRegister();
+	DMAInst.StartAcc();
 }
 
 void FFIChain::PsychoProcessDMA(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
