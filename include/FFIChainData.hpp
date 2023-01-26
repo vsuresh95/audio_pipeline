@@ -28,7 +28,7 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) 
 		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
+			SrcData.value_64 = read_mem_reqv((void *) src);
 
 			DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 			DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
@@ -145,13 +145,13 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 	{
 		// Need to cast to void* for extended ASM code.
 		SrcData.value_64 = read_mem_reqodata((void *) src);
-		OverlapData.value_64 = read_mem((void *) overlap_dst);
+		OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 
 		DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 
 	// Second, we simply copy the output (with scaling) as we are outside the overlap range.
@@ -164,7 +164,7 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		DstData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 
 	overlap_dst = m_pfOverlap[CurChannel];
@@ -180,7 +180,7 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		OverlapData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) overlap_dst, OverlapData.value_64);
+		write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
 	}
 }
 
@@ -217,7 +217,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		{
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
-			OverlapData.value_64 = read_mem((void *) overlap_dst);
+			OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 			DstData.value_64 = read_mem((void *) dst);
 
 			DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
@@ -257,7 +257,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) overlap_dst, OverlapData.value_64);
+			write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
 		}
 	} else {
 		// See init_params() for memory layout.

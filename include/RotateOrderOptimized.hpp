@@ -27,9 +27,9 @@ void AmbisonicProcessor::ProcessOrder1_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kX+=2, src_kY+=2, src_kZ+=2)
     {
-		SrcData_kX_0.value_64 = read_mem_reqodata((void *) src_kX);
-		SrcData_kY_0.value_64 = read_mem_reqodata((void *) src_kY);
-		SrcData_kZ_0.value_64 = read_mem_reqodata((void *) src_kZ);
+		SrcData_kX_0.value_64 = read_mem_reqv((void *) src_kX);
+		SrcData_kY_0.value_64 = read_mem_reqv((void *) src_kY);
+		SrcData_kZ_0.value_64 = read_mem_reqv((void *) src_kZ);
 
         // Alpha rotation
         SrcData_kY_1.value_32_1 = -SrcData_kX_0.value_32_1 * m_fSinAlpha + SrcData_kY_0.value_32_1 * m_fCosAlpha;
@@ -58,9 +58,9 @@ void AmbisonicProcessor::ProcessOrder1_3D_Optimized(CBFormat* pBFSrcDst, unsigne
         SrcData_kX_1.value_32_1 = SrcData_kX_0.value_32_1 * m_fCosGamma + SrcData_kY_0.value_32_1 * m_fSinGamma;
         SrcData_kX_1.value_32_2 = SrcData_kX_0.value_32_2 * m_fCosGamma + SrcData_kY_0.value_32_2 * m_fSinGamma;
 
-		write_mem((void *) src_kX, SrcData_kX_1.value_64);
-		write_mem((void *) src_kY, SrcData_kY_1.value_64);
-		write_mem((void *) src_kZ, SrcData_kZ_1.value_64);
+		write_mem_wtfwd((void *) src_kX, SrcData_kX_1.value_64);
+		write_mem_wtfwd((void *) src_kY, SrcData_kY_1.value_64);
+		write_mem_wtfwd((void *) src_kZ, SrcData_kZ_1.value_64);
     }
 }
 
@@ -89,11 +89,11 @@ void AmbisonicProcessor::ProcessOrder2_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kR+=2, src_kS+=2, src_kT+=2, src_kU+=2, src_kV+=2)
     {
-		SrcData_kR_0.value_64 = read_mem_reqodata((void *) src_kR);
-		SrcData_kS_0.value_64 = read_mem_reqodata((void *) src_kS);
-		SrcData_kT_0.value_64 = read_mem_reqodata((void *) src_kT);
-		SrcData_kU_0.value_64 = read_mem_reqodata((void *) src_kU);
-		SrcData_kV_0.value_64 = read_mem_reqodata((void *) src_kV);
+		SrcData_kR_0.value_64 = read_mem_reqv((void *) src_kR);
+		SrcData_kS_0.value_64 = read_mem_reqv((void *) src_kS);
+		SrcData_kT_0.value_64 = read_mem_reqv((void *) src_kT);
+		SrcData_kU_0.value_64 = read_mem_reqv((void *) src_kU);
+		SrcData_kV_0.value_64 = read_mem_reqv((void *) src_kV);
 
         // Alpha rotation
         SrcData_kV_1.value_32_1 = -SrcData_kU_0.value_32_1 * m_fSin2Alpha + SrcData_kV_0.value_32_1 * m_fCos2Alpha;
@@ -153,11 +153,11 @@ void AmbisonicProcessor::ProcessOrder2_3D_Optimized(CBFormat* pBFSrcDst, unsigne
         SrcData_kU_1.value_32_1 = SrcData_kU_0.value_32_1 * m_fCos2Gamma + SrcData_kV_0.value_32_1 * m_fSin2Gamma;
         SrcData_kU_1.value_32_2 = SrcData_kU_0.value_32_2 * m_fCos2Gamma + SrcData_kV_0.value_32_2 * m_fSin2Gamma;
 
-		write_mem((void *) src_kR, SrcData_kR_1.value_64);
-		write_mem((void *) src_kS, SrcData_kS_1.value_64);
-		write_mem((void *) src_kT, SrcData_kT_1.value_64);
-		write_mem((void *) src_kU, SrcData_kU_1.value_64);
-		write_mem((void *) src_kV, SrcData_kV_1.value_64);
+		write_mem_wtfwd((void *) src_kR, SrcData_kR_1.value_64);
+		write_mem_wtfwd((void *) src_kS, SrcData_kS_1.value_64);
+		write_mem_wtfwd((void *) src_kT, SrcData_kT_1.value_64);
+		write_mem_wtfwd((void *) src_kU, SrcData_kU_1.value_64);
+		write_mem_wtfwd((void *) src_kV, SrcData_kV_1.value_64);
     }
 }
 
@@ -197,13 +197,13 @@ void AmbisonicProcessor::ProcessOrder3_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kQ+=2, src_kO+=2, src_kM+=2, src_kK+=2, src_kL+=2, src_kN+=2, src_kP+=2)
     {
-		SrcData_kQ_0.value_64 = read_mem_reqodata((void *) src_kQ);
-		SrcData_kO_0.value_64 = read_mem_reqodata((void *) src_kO);
-		SrcData_kM_0.value_64 = read_mem_reqodata((void *) src_kM);
-		SrcData_kK_0.value_64 = read_mem_reqodata((void *) src_kK);
-		SrcData_kL_0.value_64 = read_mem_reqodata((void *) src_kL);
-		SrcData_kN_0.value_64 = read_mem_reqodata((void *) src_kN);
-		SrcData_kP_0.value_64 = read_mem_reqodata((void *) src_kP);
+		SrcData_kQ_0.value_64 = read_mem_reqv((void *) src_kQ);
+		SrcData_kO_0.value_64 = read_mem_reqv((void *) src_kO);
+		SrcData_kM_0.value_64 = read_mem_reqv((void *) src_kM);
+		SrcData_kK_0.value_64 = read_mem_reqv((void *) src_kK);
+		SrcData_kL_0.value_64 = read_mem_reqv((void *) src_kL);
+		SrcData_kN_0.value_64 = read_mem_reqv((void *) src_kN);
+		SrcData_kP_0.value_64 = read_mem_reqv((void *) src_kP);
 
         // Alpha rotation
         SrcData_kQ_1.value_32_1 = -SrcData_kP_0.value_32_1 * m_fSin3Alpha + SrcData_kQ_0.value_32_1 * m_fCos3Alpha;
@@ -305,13 +305,13 @@ void AmbisonicProcessor::ProcessOrder3_3D_Optimized(CBFormat* pBFSrcDst, unsigne
         SrcData_kP_1.value_32_1 = SrcData_kP_0.value_32_1 * m_fCos3Gamma + SrcData_kQ_0.value_32_1 * m_fSin3Gamma;
         SrcData_kP_1.value_32_2 = SrcData_kP_0.value_32_2 * m_fCos3Gamma + SrcData_kQ_0.value_32_2 * m_fSin3Gamma;
 
-		write_mem((void *) src_kQ, SrcData_kQ_1.value_64);
-		write_mem((void *) src_kO, SrcData_kO_1.value_64);
-		write_mem((void *) src_kM, SrcData_kM_1.value_64);
-		write_mem((void *) src_kK, SrcData_kK_1.value_64);
-		write_mem((void *) src_kL, SrcData_kL_1.value_64);
-		write_mem((void *) src_kN, SrcData_kN_1.value_64);
-		write_mem((void *) src_kP, SrcData_kP_1.value_64);
+		write_mem_wtfwd((void *) src_kQ, SrcData_kQ_1.value_64);
+		write_mem_wtfwd((void *) src_kO, SrcData_kO_1.value_64);
+		write_mem_wtfwd((void *) src_kM, SrcData_kM_1.value_64);
+		write_mem_wtfwd((void *) src_kK, SrcData_kK_1.value_64);
+		write_mem_wtfwd((void *) src_kL, SrcData_kL_1.value_64);
+		write_mem_wtfwd((void *) src_kN, SrcData_kN_1.value_64);
+		write_mem_wtfwd((void *) src_kP, SrcData_kP_1.value_64);
     }
 }
 

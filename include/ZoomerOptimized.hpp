@@ -62,22 +62,22 @@ void AmbisonicZoomer::ProcessOptimized(CBFormat *pBFSrcDst, unsigned nSamples)
     {
         audio_t fMic = 0.f;
 
-        SrcData_0.value_64 = read_mem_reqodata((void *) src_0);
-        SrcData_1.value_64 = read_mem_reqodata((void *) src_1);
-        SrcData_2.value_64 = read_mem_reqodata((void *) src_2);
-        SrcData_3.value_64 = read_mem_reqodata((void *) src_3);
-        SrcData_4.value_64 = read_mem_reqodata((void *) src_4);
-        SrcData_5.value_64 = read_mem_reqodata((void *) src_5);
-        SrcData_6.value_64 = read_mem_reqodata((void *) src_6);
-        SrcData_7.value_64 = read_mem_reqodata((void *) src_7);
-        SrcData_8.value_64 = read_mem_reqodata((void *) src_8);
-        SrcData_9.value_64 = read_mem_reqodata((void *) src_9);
-        SrcData_10.value_64 = read_mem_reqodata((void *) src_10);
-        SrcData_11.value_64 = read_mem_reqodata((void *) src_11);
-        SrcData_12.value_64 = read_mem_reqodata((void *) src_12);
-        SrcData_13.value_64 = read_mem_reqodata((void *) src_13);
-        SrcData_14.value_64 = read_mem_reqodata((void *) src_14);
-        SrcData_15.value_64 = read_mem_reqodata((void *) src_15);
+        SrcData_0.value_64 = read_mem_reqv((void *) src_0);
+        SrcData_1.value_64 = read_mem_reqv((void *) src_1);
+        SrcData_2.value_64 = read_mem_reqv((void *) src_2);
+        SrcData_3.value_64 = read_mem_reqv((void *) src_3);
+        SrcData_4.value_64 = read_mem_reqv((void *) src_4);
+        SrcData_5.value_64 = read_mem_reqv((void *) src_5);
+        SrcData_6.value_64 = read_mem_reqv((void *) src_6);
+        SrcData_7.value_64 = read_mem_reqv((void *) src_7);
+        SrcData_8.value_64 = read_mem_reqv((void *) src_8);
+        SrcData_9.value_64 = read_mem_reqv((void *) src_9);
+        SrcData_10.value_64 = read_mem_reqv((void *) src_10);
+        SrcData_11.value_64 = read_mem_reqv((void *) src_11);
+        SrcData_12.value_64 = read_mem_reqv((void *) src_12);
+        SrcData_13.value_64 = read_mem_reqv((void *) src_13);
+        SrcData_14.value_64 = read_mem_reqv((void *) src_14);
+        SrcData_15.value_64 = read_mem_reqv((void *) src_15);
 
         // virtual microphone with polar pattern narrowing as Ambisonic order increases
         fMic = m_AmbEncoderFront_weighted[0] * SrcData_0.value_32_1
@@ -283,22 +283,22 @@ void AmbisonicZoomer::ProcessOptimized(CBFormat *pBFSrcDst, unsigned nSamples)
             SrcData_15.value_32_2 = SrcData_15.value_32_2 * m_fZoomRed;
         }
 
-		write_mem((void *) src_0, SrcData_0.value_64);
-		write_mem((void *) src_1, SrcData_1.value_64);
-		write_mem((void *) src_2, SrcData_2.value_64);
-		write_mem((void *) src_3, SrcData_3.value_64);
-		write_mem((void *) src_4, SrcData_4.value_64);
-		write_mem((void *) src_5, SrcData_5.value_64);
-		write_mem((void *) src_6, SrcData_6.value_64);
-		write_mem((void *) src_7, SrcData_7.value_64);
-		write_mem((void *) src_8, SrcData_8.value_64);
-		write_mem((void *) src_9, SrcData_9.value_64);
-		write_mem((void *) src_10, SrcData_10.value_64);
-		write_mem((void *) src_11, SrcData_11.value_64);
-		write_mem((void *) src_12, SrcData_12.value_64);
-		write_mem((void *) src_13, SrcData_13.value_64);
-		write_mem((void *) src_14, SrcData_14.value_64);
-		write_mem((void *) src_15, SrcData_15.value_64);
+		write_mem_wtfwd((void *) src_0, SrcData_0.value_64);
+		write_mem_wtfwd((void *) src_1, SrcData_1.value_64);
+		write_mem_wtfwd((void *) src_2, SrcData_2.value_64);
+		write_mem_wtfwd((void *) src_3, SrcData_3.value_64);
+		write_mem_wtfwd((void *) src_4, SrcData_4.value_64);
+		write_mem_wtfwd((void *) src_5, SrcData_5.value_64);
+		write_mem_wtfwd((void *) src_6, SrcData_6.value_64);
+		write_mem_wtfwd((void *) src_7, SrcData_7.value_64);
+		write_mem_wtfwd((void *) src_8, SrcData_8.value_64);
+		write_mem_wtfwd((void *) src_9, SrcData_9.value_64);
+		write_mem_wtfwd((void *) src_10, SrcData_10.value_64);
+		write_mem_wtfwd((void *) src_11, SrcData_11.value_64);
+		write_mem_wtfwd((void *) src_12, SrcData_12.value_64);
+		write_mem_wtfwd((void *) src_13, SrcData_13.value_64);
+		write_mem_wtfwd((void *) src_14, SrcData_14.value_64);
+		write_mem_wtfwd((void *) src_15, SrcData_15.value_64);
     }
 }
 
