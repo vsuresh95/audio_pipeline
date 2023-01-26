@@ -265,7 +265,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		dst = ppfDst;
 
 		// Here, we simply copy the output, sum it with the previous outputs.
-		for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
+		for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
