@@ -9,7 +9,6 @@
 #endif // USE_REAL_DATA
 
 #include <CohDefines.hpp>
-#include <RotateOrderHelper.hpp>
 #include <ZoomerOptimized.hpp>
 
 void AmbisonicZoomer::Configure(unsigned nChannels) {
