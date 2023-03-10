@@ -23,6 +23,8 @@ namespace ILLIXR_AUDIO{
 		// Load sound source files (predefined)
 		void loadSource();
 
+		void PrintTimeInfo(unsigned factor);
+
 		// Buffer of most recent processed block for fast copying to audio buffer
 		short mostRecentBlockL[BLOCK_SIZE];
 		short mostRecentBlockR[BLOCK_SIZE];
@@ -30,6 +32,16 @@ namespace ILLIXR_AUDIO{
 
 		// Number of blocks left to process before this stream is complete
 		unsigned long num_blocks_left;
+
+		// Time markers to capture time and save them
+		unsigned long long StartTime;
+		unsigned long long EndTime;
+		unsigned long long TotalTime[N_TIME_MARKERS];
+
+		// Helper function to start timer, end timer and
+		// capture the difference in TotalTime[Index].
+		void StartCounter();
+		void EndCounter(unsigned Index);
 
 	private:
 		ProcessType processType;

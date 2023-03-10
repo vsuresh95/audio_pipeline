@@ -11,7 +11,7 @@ CC=riscv64-unknown-linux-gnu-gcc
 CXX=riscv64-unknown-linux-gnu-g++
 LD=riscv64-unknown-linux-gnu-g++
 endif
-CFLAGS=-Wall -fPIC -I./include
+CFLAGS=-Wall -fPIC -I./include -I./libspatialaudio/acc_include
 CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
@@ -51,6 +51,24 @@ ESP_LD_FLAGS += -lcontig
 OPT_FLAGS += $(ESP_INCDIR) $(ESP_LD_LIBS)
 LD_LIBS += $(ESP_LD_FLAGS)
 endif
+
+COH_MODE ?= 0
+IS_ESP ?= 1
+DO_CHAIN_OFFLOAD ?= 0
+DO_NP_CHAIN_OFFLOAD ?= 0
+DO_PP_CHAIN_OFFLOAD ?= 0
+USE_INT ?= 0
+USE_AUDIO_DMA ?= 0
+
+RISCV_CFLAGS += -DCOH_MODE=$(COH_MODE)
+RISCV_CFLAGS += -DIS_ESP=$(IS_ESP)
+RISCV_CFLAGS += -DDO_CHAIN_OFFLOAD=$(DO_CHAIN_OFFLOAD)
+RISCV_CFLAGS += -DDO_NP_CHAIN_OFFLOAD=$(DO_NP_CHAIN_OFFLOAD)
+RISCV_CFLAGS += -DDO_PP_CHAIN_OFFLOAD=$(DO_PP_CHAIN_OFFLOAD)
+RISCV_CFLAGS += -DUSE_INT=$(USE_INT)
+RISCV_CFLAGS += -DUSE_AUDIO_DMA=$(USE_AUDIO_DMA)
+
+OPT_FLAGS += $(RISCV_CFLAGS)
 
 .PHONY: clean deepclean
 

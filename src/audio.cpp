@@ -34,6 +34,12 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
 
     unsigned int tailLength {0U};
 
+    StartTime = 0;
+    EndTime = 0;
+
+	for (unsigned i = 0; i < N_TIME_MARKERS; i++)
+    	TotalTime[i] = 0;
+
     /// Binauralizer as ambisonics decoder
     if (!decoder.Configure(NORDER, true, SAMPLERATE, BLOCK_SIZE, tailLength)) {
         configAbort("decoder");
@@ -115,7 +121,9 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE) {
         /// Processing garbage data if just decoding
         rotateNZoom(sumBF);
+        StartCounter();
         decoder.Process(&sumBF, resultSample);
+        EndCounter(2);
     }
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
@@ -179,10 +187,15 @@ void ILLIXR_AUDIO::ABAudio::updateZoom() {
 
 /// Process some rotation and zoom effects
 void ILLIXR_AUDIO::ABAudio::rotateNZoom(CBFormat& sumBF) {
+    StartCounter();
     updateRotation();
     rotator.Process(&sumBF, BLOCK_SIZE);
+    EndCounter(0);
+
+    StartCounter();
     updateZoom();
     zoomer.Process(&sumBF, BLOCK_SIZE);
+    EndCounter(1);
 }
 
 
@@ -241,4 +254,42 @@ void ILLIXR_AUDIO::ABAudio::configAbort(const std::string_view& compName) const
     std::cerr << cfg_fail_msg << compName << std::endl;
     std::abort();
 #endif /// ILLIXR_INTEGRATION
+}
+
+void ILLIXR_AUDIO::ABAudio::StartCounter() {
+	asm volatile (
+		"li t0, 0;"
+		"csrr t0, cycle;"
+		"mv %0, t0"
+		: "=r" (StartTime)
+		:
+		: "t0"
+	);
+}
+
+void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
+	asm volatile (
+		"li t0, 0;"
+		"csrr t0, cycle;"
+		"mv %0, t0"
+		: "=r" (EndTime)
+		:
+		: "t0"
+	);
+
+    TotalTime[Index] += EndTime - StartTime;
+}
+
+void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM AUDIO\n");
+    printf("---------------------------------------------\n");
+    printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
+    printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
+    printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
+    printf("\n");
+
+    // Call lower-level print functions.
+    rotator.PrintTimeInfo(factor);
+    decoder.PrintTimeInfo(factor);
 }
