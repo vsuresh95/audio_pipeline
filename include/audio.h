@@ -31,6 +31,8 @@ namespace ILLIXR_AUDIO{
 		// Number of blocks left to process before this stream is complete
 		unsigned long num_blocks_left;
 
+    	std::map<int, int> precision_values;
+
 	private:
 		ProcessType processType;
 		// a list of sound sources in this audio

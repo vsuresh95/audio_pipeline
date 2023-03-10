@@ -46,6 +46,9 @@ extern unsigned m_nChannelCount_copy;
 unsigned do_fft2_acc_offload;
 bool do_rotate_acc_offload;
 
+bool print_precision_now;
+unsigned print_precision_norm_factor;
+
 #ifndef NATIVE_COMPILE
 rotate_token_t *rotate_buf;
 fft2_token_t *fft2_buf;
@@ -71,6 +74,44 @@ struct rotate_params {
     float m_fCos3Gamma;
     float m_fSin3Gamma;
 } rotate_params_inst;
+
+void get_precision_values(std::map<int, int> &precision_values, float *buffer_to_check, int num_values) {
+    for (unsigned i = 0; i < num_values; i++) {
+        if (buffer_to_check[i] == 0) {
+            precision_values[-25]++;
+            continue;
+        }
+
+        for (int power = -15; power < 6; power++) {
+            float compare = std::pow(10, power);
+
+            if (std::fabs(buffer_to_check[i]) < compare) {
+                precision_values[power]++;
+                break;
+            }
+        }
+    }
+}
+
+static char print_index = 'a';
+
+void print_precision_values(std::string print_message, std::map<int, int> &precision_values) {
+    if (print_precision_now) {
+#if 0
+        std::cout << print_message << " Precision map:" << std::endl;
+        std::cout << "0" << " = " << precision_values[-25]/print_precision_norm_factor << " | ";
+        for (int power = -15; power < 6; power++) {
+            std::cout << "10e" << power << " = " << precision_values[power]/print_precision_norm_factor << " | ";
+        }
+        std::cout << std::endl;
+#else
+        for (int power = -15; power < 6; power++) {
+            std::cout << print_index << "," << power << "," << precision_values[power]/print_precision_norm_factor << std::endl;
+        }
+        print_index++;
+#endif
+    }
+}
 
 void rotate_order_acc_offload(CBFormat* pBFSrcDst, unsigned nSamples)
 {
@@ -270,6 +311,8 @@ int main(int argc, char const *argv[])
 
     do_fft2_acc_offload = 0;
     do_rotate_acc_offload = false;
+    print_precision_now = false;
+    print_precision_norm_factor = numBlocks;
 
     #ifndef NATIVE_COMPILE
     size_t rotate_size = sizeof(rotate_token_t) * NUM_SRCS * BLOCK_SIZE * 2;
@@ -283,6 +326,8 @@ int main(int argc, char const *argv[])
         clock_t t_start;
         clock_t t_end;
         double t_diff;
+        
+        if (i == numBlocks - 1) print_precision_now = true;
 
         t_start = clock();
         audio.processBlock();

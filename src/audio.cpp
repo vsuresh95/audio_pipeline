@@ -8,6 +8,9 @@ extern double t_decode;
 extern double t_rotate;
 extern double t_zoom;
 
+extern void get_precision_values(std::map<int, int> &precision_values, float *buffer_to_check, int num_values);
+extern void print_precision_values(std::string print_message, std::map<int, int> &precision_values);
+
 #ifdef ILLIXR_INTEGRATION
 #include "../common/error_util.hpp"
 #endif /// ILLIXR_INTEGRATION
@@ -120,6 +123,11 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::DECODE) {
         readNEncode(sumBF);
     }
+
+    for(unsigned niChannel = 0; niChannel < NUM_SRCS; niChannel++) {
+        get_precision_values(precision_values, sumBF.m_ppfChannels[niChannel], BLOCK_SIZE);
+    }
+    print_precision_values("audio.cpp sumBF.m_ppfChannels", precision_values);
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE) {
         /// Processing garbage data if just decoding
