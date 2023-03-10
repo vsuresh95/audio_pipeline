@@ -27,16 +27,8 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    // Launch realtime audio thread for audio processing
-    if (procType == ABAudio::ProcessType::FULL) {
-        pthread_t rt_audio_thread;
-        pthread_create(&rt_audio_thread, NULL, illixr_rt_init, (void *)&audio);
-        pthread_join(rt_audio_thread, NULL);
-    }
-    else {
-        for (int i = 0; i < numBlocks; ++i) {
-            audio.processBlock();
-        }
+    for (int i = 0; i < numBlocks; ++i) {
+        audio.processBlock();
     }
 
     return 0;
