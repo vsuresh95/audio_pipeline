@@ -31,6 +31,7 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
+    printf("[MAIN] Starting Processing\n");
     for (int i = 0; i < numBlocks; ++i) {
         audio.processBlock();
         printf("[MAIN] Audio block %d done\n", i);

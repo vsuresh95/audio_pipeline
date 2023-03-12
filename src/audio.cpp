@@ -57,6 +57,12 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
 
     buffer_ready = false;
     num_blocks_left = 0;
+
+    resultSample = (float **) esp_alloc(2 * sizeof(float *));
+    resultSample[0] = (float *) esp_alloc(BLOCK_SIZE * sizeof(float));
+    resultSample[1] = (float *) esp_alloc(BLOCK_SIZE * sizeof(float));
+
+    sumBF.Configure(NORDER, true, BLOCK_SIZE);
 }
 
 
@@ -106,13 +112,6 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
 
 
 void ILLIXR_AUDIO::ABAudio::processBlock() {
-    float** resultSample = new float*[2];
-    resultSample[0] = new float[BLOCK_SIZE];
-    resultSample[1] = new float[BLOCK_SIZE];
-
-    /// Temporary BFormat file to sum up ambisonics
-    CBFormat sumBF;
-    sumBF.Configure(NORDER, true, BLOCK_SIZE);
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::DECODE) {
         readNEncode(sumBF);
@@ -132,10 +131,6 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
             num_blocks_left--;
         }
     }
-
-    delete[] resultSample[0];
-    delete[] resultSample[1];
-    delete[] resultSample;
 }
 
 

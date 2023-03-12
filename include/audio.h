@@ -43,6 +43,10 @@ namespace ILLIXR_AUDIO{
 		void StartCounter();
 		void EndCounter(unsigned Index);
 
+		float** resultSample;
+
+    	// BFormat file to sum up ambisonics
+    	CBFormat sumBF;
 	private:
 		ProcessType processType;
 		// a list of sound sources in this audio

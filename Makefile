@@ -110,6 +110,7 @@ libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: $(LIBSPATIALAUDIO_FI
 	cmake -DCMAKE_INSTALL_PREFIX=RelWithDebInfo \
 	      -DCMAKE_AR=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ar \
 	      -DCMAKE_RANLIB=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ranlib \
+		  -DESP_DRIVERS=${ESP_DRIVERS} \
 		  -DBUILD_SHARED_LIBS=OFF ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install
