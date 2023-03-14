@@ -7,6 +7,8 @@
 #include "../common/error_util.hpp"
 #endif /// ILLIXR_INTEGRATION
 
+FFIChain* FFIChainInstHandle;
+
 std::string get_path() {
 #ifdef ILLIXR_INTEGRATION
     const char* AUDIO_ROOT_c_str = std::getenv("AUDIO_ROOT");
@@ -63,6 +65,39 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     resultSample[1] = (float *) esp_alloc(BLOCK_SIZE * sizeof(float));
 
     sumBF.Configure(NORDER, true, BLOCK_SIZE);
+    
+    // Hardware acceleration
+    // 1. Regular invocation chain
+    // 2. Shared memory invocation chain - non-pipelined or pipelined
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        // Configure accelerator parameters and write them to accelerator registers.
+        FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
+        FFIChainInst.ConfigureAcc();
+
+        // Assign size parameters that is used for data store and load loops
+        FFIChainInst.m_nChannelCount = rotator.m_nChannelCount;
+        FFIChainInst.m_fFFTScaler = rotator.m_fFFTScaler;
+        FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
+        FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
+        FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
+
+    	// Write input data for psycho twiddle factors
+    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
+    
+        // For shared memory invocation cases, we can
+        // start the accelerators (to start polling).
+        if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+            FFIChainInst.StartAcc();
+
+            // Use the DMA to load all inputs and filter weights
+            // into its private scratchpad.
+            if (USE_AUDIO_DMA) {
+                FFIChainInst.ConfigureDMA();
+            }
+        }
+
+        FFIChainInstHandle = &FFIChainInst;
+    }
 }
 
 
@@ -129,6 +164,13 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
         writeFile(resultSample);
         if (num_blocks_left > 0) {
             num_blocks_left--;
+        }
+    }
+
+    // End accelerator operation with a dummy iteration
+    if (num_blocks_left == 0) {
+        if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+            FFIChainInst.EndAcc();
         }
     }
 }
@@ -287,4 +329,17 @@ void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);
     decoder.PrintTimeInfo(factor);
+
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor);
+    }
+}
+
+void OffloadChain(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, float* m_pfScratchBufferA, unsigned CurChannel, unsigned m_nOverlapLength, bool IsSharedMemory) {
+    FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
+    if (IsSharedMemory) {
+        FFIChainInstHandle->NonPipelineProcess(pBFSrcDst, m_Filters, (audio_t *) m_pfScratchBufferA, CurChannel, true);
+    } else {
+        FFIChainInstHandle->RegularProcess(pBFSrcDst, m_Filters, (audio_t *) m_pfScratchBufferA, CurChannel, false);
+    }
 }

@@ -11,18 +11,19 @@ CC=riscv64-unknown-linux-gnu-gcc
 CXX=riscv64-unknown-linux-gnu-g++
 LD=riscv64-unknown-linux-gnu-g++
 endif
-CFLAGS=-Wall -fPIC -I./include -I./libspatialaudio/acc_include
+CFLAGS=-Wall -fPIC -I./include
 CXXFLAGS=-std=c++17 -Wall -fPIC -I./include -I./portaudio/include -Wno-overloaded-virtual
 LD_LIBS=-lpthread -pthread
 DBG_FLAGS=-Og -g -I./libspatialaudio/build/Debug/include
 OPT_FLAGS=-O3 -DNDEBUG -I./libspatialaudio/build/RelWithDebInfo/include -I./libspatialaudio/source/kiss_fft
+OPT_FLAGS+=-I./libspatialaudio/include
 ifdef NATIVE_COMPILE
 OPT_FLAGS+=-DNATIVE_COMPILE
 endif
 HPP_FILES := $(shell find -L . -name '*.hpp')
 HPP_FILES := $(patsubst ./%,%,$(HPP_FILES))
 
-SRCFILES=audio.cpp sound.cpp
+SRCFILES=audio.cpp sound.cpp FFIChain.cpp
 DBGOBJFILES=$(patsubst %.c,%.dbg.o,$(patsubst %.cpp,%.dbg.o,$(SRCFILES)))
 OPTOBJFILES=$(patsubst %.c,%.opt.o,$(patsubst %.cpp,%.opt.o,$(SRCFILES)))
 
@@ -84,7 +85,7 @@ solo.dbg.exe: $(HPP_FILES) $(DBGOBJFILES) main.dbg.o libspatialaudio/build/Debug
 solo.opt.exe: $(HPP_FILES) $(OPTOBJFILES) main.opt.o libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(LD) $(CXXFLAGS) $(OPT_FLAGS) $(filter-out $(HPP_FILES),$^) $(LD_LIBS) -o $@ 
 
-%.opt.o: src/%.cpp libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
+%.opt.o: src/%.cpp $(HPP_FILES) libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
 	$(CXX) $(OPT_FLAGS) $(CXXFLAGS) $< -c -o $@
 
 %.opt.o: src/%.c libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a
@@ -111,6 +112,7 @@ libspatialaudio/build/RelWithDebInfo/lib/libspatialaudio.a: $(LIBSPATIALAUDIO_FI
 	      -DCMAKE_AR=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ar \
 	      -DCMAKE_RANLIB=/home/espuser/riscv/bin/riscv64-unknown-linux-gnu-ranlib \
 		  -DESP_DRIVERS=${ESP_DRIVERS} \
+		  -DCMAKE_CXX_FLAGS="${RISCV_CFLAGS}" \
 		  -DBUILD_SHARED_LIBS=OFF ..
 	$(MAKE) -C libspatialaudio/build
 	$(MAKE) -C libspatialaudio/build install

@@ -6,6 +6,7 @@
 #include <string_view>
 #include <optional>
 #include <pthread.h>
+#include "FFIChain.hpp"
 
 namespace ILLIXR_AUDIO{
 	class ABAudio{
@@ -47,6 +48,11 @@ namespace ILLIXR_AUDIO{
 
     	// BFormat file to sum up ambisonics
     	CBFormat sumBF;
+
+		// Instance of FFT-FIR-IFFT chain object. This object is
+		// eventually passed to rotator and decoder to perform the FFI
+		// chains in the respective Process() functions.
+		FFIChain FFIChainInst;
 	private:
 		ProcessType processType;
 		// a list of sound sources in this audio
