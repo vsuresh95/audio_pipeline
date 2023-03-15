@@ -14,6 +14,11 @@ void FFIChain::ConfigureAcc() {
 	mem = (device_t *) esp_alloc(mem_size);
     sm_sync = (volatile device_t*) mem;
 
+	// Reset all sync variables to default values.
+	for (unsigned memElem = 0; memElem < (mem_size/sizeof(device_t)); memElem++) {
+		mem[memElem] = 0;
+	}
+
 	// Assign SpandexConfig and CoherenceMode based on compiler flags.
 	SetSpandexConfig(IS_ESP, COH_MODE);
 	SetCohMode(IS_ESP, COH_MODE);
