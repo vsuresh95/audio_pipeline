@@ -144,7 +144,7 @@ public:
     // In case of pipelined operation, this function
     // replaces ReadOutput. It performs ReadOutput,
     // as well as the overlap operation.
-    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast);
+    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst);
 
     // Handle pipelined operation of binauralizer filter.
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);

@@ -173,7 +173,7 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 	}
 }
 
-void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast) {
+void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst) {
 	unsigned ReadLength =  m_nBlockSize;
 	unsigned OverlapLength = m_nOverlapLength;
 	device_token_t SrcData;
@@ -247,6 +247,23 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
+		}
+	} else if (isFirst) {
+		// See init_params() for memory layout.
+		src = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
+		dst = ppfDst;
+
+		// Here, we simply copy the output, sum it with the previous outputs.
+		for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
+		{
+			// Need to cast to void* for extended ASM code.
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+
+			DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+			DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
+
+			// Need to cast to void* for extended ASM code.
+			write_mem((void *) dst, DstData.value_64);
 		}
 	} else {
 		// See init_params() for memory layout.

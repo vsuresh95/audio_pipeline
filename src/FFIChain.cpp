@@ -233,7 +233,7 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 					sm_sync[ProdVldFlag] = 0;
 					// Read back output
         			StartCounter();
-					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
+					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1), (OutputChannelsLeft == m_nChannelCount));
     				asm volatile ("fence w, w");
         			EndCounter(5);
 					// Inform IFFT (producer)
