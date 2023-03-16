@@ -231,7 +231,7 @@ void ILLIXR_AUDIO::ABAudio::rotateNZoom(CBFormat& sumBF) {
 
     StartCounter();
     updateZoom();
-    zoomer.Process(&sumBF, BLOCK_SIZE);
+    zoomer.ProcessOptimized(&sumBF, BLOCK_SIZE);
     EndCounter(1);
 }
 
