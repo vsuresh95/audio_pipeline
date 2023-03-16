@@ -46,6 +46,18 @@ typedef int device_t;
 #define FLT_READY_FLAG_OFFSET 8
 #define NUM_DEVICES 3
 
+#define LOAD_STORE_FLAG_OFFSET 2
+#define NUM_CFG_REG 8
+
+#define RD_SIZE SYNC_VAR_SIZE
+#define RD_SP_OFFSET SYNC_VAR_SIZE + 1
+#define MEM_SRC_OFFSET SYNC_VAR_SIZE + 2
+#define WR_SIZE SYNC_VAR_SIZE + 3
+#define WR_SP_OFFSET SYNC_VAR_SIZE + 4
+#define MEM_DST_OFFSET SYNC_VAR_SIZE + 5
+#define CONS_VALID_OFFSET SYNC_VAR_SIZE + 6
+#define CONS_READY_OFFSET SYNC_VAR_SIZE + 7
+
 class FFIChain {
 public:
     // Buffer pointers.
@@ -85,6 +97,10 @@ public:
     unsigned m_nFFTBins;
     unsigned m_nOverlapLength;
     audio_t m_fFFTScaler;
+
+    // Scratchpad offsets
+    unsigned init_data_offset;
+    unsigned psycho_filters_offset;
     
     // Time markers to capture time and save them
     unsigned long long StartTime;
@@ -103,6 +119,8 @@ public:
     void ConfigureAcc();
     void StartAcc();
     void EndAcc();
+    void StartDMA();
+    void EndDMA();
 
     // Chain offload using regular accelerator invocation.
     // Here, pBFSrcDst is the shared BFormat passed between
@@ -152,13 +170,25 @@ public:
     void PrintTimeInfo(unsigned factor, bool isPsycho = true);
 
     // Configure class parameters of the DMA.
-    void ConfigureDMA();
+    void ConfigureDMA(kiss_fft_cpx** m_ppcpPsychFilters, kiss_fft_cpx*** m_ppcpFilters);
 
     // Handle pipelined operation of psycho-acoustic filter, with DMA.
     void PsychoProcessDMA(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
 
     // Handle pipelined operation of binauralizer filter, with DMA.
     void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
+
+    // Pre-load all input and filter data to the audio DMA scratchpad.
+    void LoadAllData(kiss_fft_cpx** m_ppcpPsychFilters, kiss_fft_cpx*** m_ppcpFilters);
+
+    // Store input data from audio DMA scratchpad to FFT input buffer on demand.
+    void StoreInputData(unsigned InitChannel);
+
+    // Store psycho-acoustic filters from audio DMA scratchpad to FIR filter buffer on demand.
+    void StorePsychoFilters(unsigned InitChannel);
+    
+    // Store binauralizer filters from audio DMA scratchpad to FIR filter buffer on demand.
+    void StoreBinaurFilters(unsigned InitEar, unsigned InitChannel);
 };
 
 #endif // FFICHAIN_H

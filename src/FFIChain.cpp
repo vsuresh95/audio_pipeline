@@ -4,7 +4,7 @@
 #include <FFIChain.hpp>
 #include <FFIChainHelper.hpp>
 #include <FFIChainData.hpp>
-// #include <FFIChainDMA.hpp>
+#include <FFIChainDMA.hpp>
 
 void FFIChain::ConfigureAcc() {
 	InitParams();

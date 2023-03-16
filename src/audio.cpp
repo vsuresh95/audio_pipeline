@@ -9,6 +9,8 @@
 
 FFIChain* FFIChainInstHandle;
 
+extern bool can_use_audio_dma;
+
 std::string get_path() {
 #ifdef ILLIXR_INTEGRATION
     const char* AUDIO_ROOT_c_str = std::getenv("AUDIO_ROOT");
@@ -91,8 +93,8 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
 
             // Use the DMA to load all inputs and filter weights
             // into its private scratchpad.
-            if (USE_AUDIO_DMA) {
-                FFIChainInst.ConfigureDMA();
+            if (can_use_audio_dma) {
+                FFIChainInst.ConfigureDMA(rotator.m_ppcpPsychFilters, decoder.m_ppcpFilters);
             }
         }
 
@@ -171,6 +173,9 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     if (num_blocks_left == 0) {
         if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
             FFIChainInst.EndAcc();
+        }
+        if (can_use_audio_dma) {
+            FFIChainInst.EndDMA();
         }
     }
 }
@@ -345,7 +350,7 @@ void OffloadChain(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, float* m_pfScrat
 
 void OffloadPsychoPipeline(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength) {
     FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
-    if (USE_AUDIO_DMA)
+    if (can_use_audio_dma)
         FFIChainInstHandle->PsychoProcessDMA(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
     else
         FFIChainInstHandle->PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
@@ -353,7 +358,7 @@ void OffloadPsychoPipeline(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilter
 
 void OffloadBinaurPipeline(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_ppcpFilters, float** m_pfOverlap, unsigned m_nOverlapLength) {
     FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
-    if (USE_AUDIO_DMA)
+    if (can_use_audio_dma)
         FFIChainInstHandle->BinaurProcessDMA(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
     else
         FFIChainInstHandle->BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);

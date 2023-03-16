@@ -32,7 +32,7 @@ char dma_dev_name[] = "audio_dma_stratus.0";
 /* <<--params-def-->> */
 #define LOGN_SAMPLES 10
 #define DO_SHIFT 0
-#define SIZE 1
+#define START_OFFSET 1
 
 struct audio_fft_stratus_access {
 	struct esp_access esp;
@@ -59,7 +59,7 @@ struct audio_fir_stratus_access {
 struct audio_dma_stratus_access {
 	struct esp_access esp;
 	/* <<--regs-->> */
-	unsigned size;
+	unsigned start_offset;
 	unsigned src_offset;
 	unsigned dst_offset;
 	unsigned spandex_conf;
@@ -101,7 +101,7 @@ struct audio_fir_stratus_access audio_fir_cfg_000[] = {
 struct audio_dma_stratus_access audio_dma_cfg_000[] = {
 	{
 		/* <<--descriptor-->> */
-		.size = SIZE,
+		.start_offset = START_OFFSET,
 		.src_offset = 0,
 		.dst_offset = 0,
 	}

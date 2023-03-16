@@ -5,6 +5,8 @@
 
 void PrintHeader();
 
+bool can_use_audio_dma;
+
 int main(int argc, char const *argv[])
 {
     using namespace ILLIXR_AUDIO;
@@ -26,6 +28,8 @@ int main(int argc, char const *argv[])
         else
             procType = ABAudio::ProcessType::DECODE;
     }
+
+    can_use_audio_dma = (USE_AUDIO_DMA == 1) && (procType == ABAudio::ProcessType::DECODE);
     
     ABAudio audio("output.wav", procType);
     audio.loadSource();
