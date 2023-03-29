@@ -52,6 +52,8 @@ void PrintHeader() {
     printf("3D AUDIO DECODER\n");
     printf("---------------------------------------------\n");
     printf("COH PROTOCOL = %s\n", CohPrintHeader);
+    printf("CONFIG = %s\n", USE_MONOLITHIC_ACC ? "Monolithic Accelerator" :
+                            "Composable Accelerator");
     printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
                                 (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
                                 (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :

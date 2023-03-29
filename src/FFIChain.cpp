@@ -5,7 +5,9 @@
 #include <FFIChainHelper.hpp>
 #include <FFIChainData.hpp>
 #include <FFIChainDMA.hpp>
+#include <FFIChainMono.hpp>
 
+#if (USE_MONOLITHIC_ACC == 0)
 void FFIChain::ConfigureAcc() {
 	InitParams();
 
@@ -123,6 +125,7 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	sm_sync[ProdRdyFlag] = 1;
     EndCounter(3);
 }
+#endif
 
 void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned InputChannelsLeft = m_nChannelCount;

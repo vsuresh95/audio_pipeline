@@ -48,6 +48,7 @@ void FFIChain::InitParams() {
 	DMAVldFlag = 8*acc_len + VALID_FLAG_OFFSET;
 }
 
+#if (USE_MONOLITHIC_ACC == 0)
 void FFIChain::StartAcc() {
     // Invoke accelerators but do not check for end
     audio_fft_cfg_000[0].esp.start_stop = 1;
@@ -58,6 +59,7 @@ void FFIChain::StartAcc() {
     esp_run(fir_cfg_000, 1);
     esp_run(ifft_cfg_000, 1);
 }
+#endif
 
 void FFIChain::EndAcc() {
 	// Set all END variables to 1.
