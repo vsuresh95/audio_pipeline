@@ -166,7 +166,7 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         printf("Binaur Chain\t = %lu\n", TotalTime[0]/factor);
     } else {
         printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
@@ -174,7 +174,7 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
         printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
     }
 
-    if (DO_NP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor);
     } else if (DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, false);

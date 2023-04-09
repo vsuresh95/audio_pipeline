@@ -76,55 +76,67 @@ void FFIChain::StartAcc() {
 
 void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
 	// Write input data for FFT.
+    StartCounter();
 	InitData(pBFSrcDst, CurChannel, IsInit);
+    EndCounter(0);
+
 	// Write input data for FIR filters.
+    StartCounter();
 	InitFilters(pBFSrcDst, m_Filters);
+    EndCounter(1);
 
 	// Start and check for termination of each accelerator.
+    StartCounter();
 	FFTInst.StartAcc();
 	FFTInst.TerminateAcc();
 	FIRInst.StartAcc();
 	FIRInst.TerminateAcc();
 	IFFTInst.StartAcc();
 	IFFTInst.TerminateAcc();
+    EndCounter(2);
 
 	// Read back output from IFFT.
+    StartCounter();
 	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
+    EndCounter(3);
 }
 
 void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
+    StartCounter();
 	// Wait for FFT (consumer) to be ready.
 	while (sm_sync[ConsRdyFlag] != 1);
 	// Reset flag for next iteration.
 	sm_sync[ConsRdyFlag] = 0;
 	// Write input data for FFT.
-    StartCounter();
 	InitData(pBFSrcDst, CurChannel, IsInit);
     EndCounter(0);
-	// Inform FFT (consumer) to start.
-	sm_sync[ConsVldFlag] = 1;
 
+    StartCounter();
 	// Wait for FIR (consumer) to be ready.
 	while (sm_sync[FltRdyFlag] != 1);
 	// Reset flag for next iteration.
 	sm_sync[FltRdyFlag] = 0;
 	// Write input data for FIR filters.
-    StartCounter();
 	InitFilters(pBFSrcDst, m_Filters);
-    EndCounter(1);
-	// Inform FIR (consumer) to start.
+	// Inform FIR (consumer) of filters ready.
 	sm_sync[FltVldFlag] = 1;
+	// Inform FFT (consumer) to start.
+	sm_sync[ConsVldFlag] = 1;
+    EndCounter(1);
 
+    StartCounter();
 	// Wait for IFFT (producer) to send output.
 	while (sm_sync[ProdVldFlag] != 1);
 	// Reset flag for next iteration.
 	sm_sync[ProdVldFlag] = 0;
-	// Read back output from IFFT
-    StartCounter();
-	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
     EndCounter(2);
+
+    StartCounter();
+	// Read back output from IFFT
+	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
 	// Inform IFFT (producer) - ready for next iteration.
 	sm_sync[ProdRdyFlag] = 1;
+    EndCounter(2);
 }
 #endif
 
@@ -265,19 +277,17 @@ void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		printf("Init Data\t = %lu\n", TotalTime[0]/factor);
 		printf("Init Filters\t = %lu\n", TotalTime[1]/factor);
-		printf("Output Read\t = %lu\n", TotalTime[2]/factor);
+		printf("Acc execution\t = %llu\n", TotalTime[2]/factor);
+		printf("Output Read\t = %lu\n", TotalTime[3]/factor);
 	} else if (DO_PP_CHAIN_OFFLOAD) {
-		if (isPsycho) {
-			printf("Psycho Init Data\t = %lu\n", TotalTime[0]/factor);
-			printf("Psycho Init Filters\t = %lu\n", TotalTime[1]/factor);
-			printf("Psycho Output Read\t = %lu\n", TotalTime[2]/factor);
-		} else {
-			printf("Binaur Init Data\t = %lu\n", TotalTime[3]/factor);
-			printf("Binaur Init Filters\t = %lu\n", TotalTime[4]/factor);
-			printf("Binaur Output Read\t = %lu\n", TotalTime[5]/factor);
-		}
+		printf("Psycho Init Data\t = %lu\n", TotalTime[0]/factor);
+		printf("Psycho Init Filters\t = %lu\n", TotalTime[1]/factor);
+		printf("Psycho Output Read\t = %lu\n", TotalTime[2]/factor);
+		printf("Binaur Init Data\t = %lu\n", TotalTime[3]/factor);
+		printf("Binaur Init Filters\t = %lu\n", TotalTime[4]/factor);
+		printf("Binaur Output Read\t = %lu\n", TotalTime[5]/factor);
 	}
 }

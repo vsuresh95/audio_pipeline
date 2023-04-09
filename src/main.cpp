@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     // Process all audio blocks one by one.
     for (int i = 0; i < numBlocks; i++) {
         audio.processBlock();
-        printf("[MAIN] Audio block %d done\n", i);
+        printf("[MAIN] %d done\n", i);
     }
 
     // Print out profile results.
@@ -48,6 +48,8 @@ void PrintHeader() {
     printf("NUM_BLOCKS = %d\n", NUM_BLOCKS);
     printf("BLOCK_SIZE = %d\n", BLOCK_SIZE);
     printf("COH PROTOCOL = %s\n", CohPrintHeader);
+    printf("CONFIG = %s\n", USE_MONOLITHIC_ACC ? "Monolithic Accelerator" :
+                            "Composable Accelerator");
     printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
                                 (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
                                 (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :

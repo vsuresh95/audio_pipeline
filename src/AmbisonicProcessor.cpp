@@ -404,7 +404,7 @@ void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
     printf("TOTAL TIME FROM %s\n", Name);
     printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         printf("Psycho Chain\t = %lu\n", TotalTime[0]/factor);
     } else {
         printf("Psycho FFT\t = %lu\n", TotalTime[0]/factor);
@@ -415,7 +415,7 @@ void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
     printf("Rotate O2\t = %lu\n", TotalTime[4]/factor);
     printf("Rotate O3\t = %lu\n", TotalTime[5]/factor);
 
-    if (DO_NP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor);
     } else if (DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, true);

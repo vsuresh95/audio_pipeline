@@ -57,17 +57,26 @@ void FFIChain::StartAcc() {
 }
 
 void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
+    StartCounter();
 	// Write input data for FFT.
 	InitData(pBFSrcDst, CurChannel, IsInit);
+    EndCounter(0);
+
+    StartCounter();
 	// Write input data for FIR filters.
 	InitFilters(pBFSrcDst, m_Filters);
+    EndCounter(1);
 
+    StartCounter();
 	// Start and check for termination of each accelerator.
 	FFIInst.StartAcc();
 	FFIInst.TerminateAcc();
+    EndCounter(2);
 
+    StartCounter();
 	// Read back output from IFFT.
 	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
+    EndCounter(3);
 }
 
 void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
@@ -93,16 +102,19 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	sm_sync[ConsVldFlag] = 1;
     EndCounter(1);
 
+    StartCounter();
 	// Wait for IFFT (producer) to send output.
 	while (sm_sync[ProdVldFlag] != 1);
 	// Reset flag for next iteration.
 	sm_sync[ProdVldFlag] = 0;
-	// Read back output from IFFT
-    StartCounter();
-	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
     EndCounter(2);
+
+    StartCounter();
+	// Read back output from IFFT
+	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
 	// Inform IFFT (producer) - ready for next iteration.
 	sm_sync[ProdRdyFlag] = 1;
+    EndCounter(3);
 }
 #endif // USE_MONOLITHIC_ACC
 
