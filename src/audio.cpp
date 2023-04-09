@@ -164,9 +164,10 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
         writeFile(resultSample);
-        if (num_blocks_left > 0) {
-            num_blocks_left--;
-        }
+    }
+
+    if (num_blocks_left > 0) {
+        num_blocks_left--;
     }
 
     // End accelerator operation with a dummy iteration
