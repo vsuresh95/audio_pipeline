@@ -6,6 +6,7 @@
 
 #include <FFTAcc.hpp>
 #include <FIRAcc.hpp>
+#include <FFIAcc.hpp>
 
 #include <kiss_fftr.hpp>
 #include <BFormat.hpp>
@@ -58,6 +59,9 @@ public:
     // Instance of DMA accelerator to offload data movements
     DMAAcc DMAInst;
 
+    // Instance of Monolithic FFI accelerator.
+    FFIAcc FFIInst;
+
     // Buffer pointers.
     device_t *mem;
     unsigned **ptable;
@@ -104,6 +108,9 @@ public:
     void ConfigureAcc();
     void StartAcc();
 
+    void MonolithicConfigureAcc();
+    void MonolithicStartAcc();
+
     // Chain offload using regular accelerator invocation.
     // Here, pBFSrcDst is the shared BFormat passed between
     // tasks in the application.
@@ -112,10 +119,12 @@ public:
     // m_pfScratchBufferA is the output buffer.
     // CurChannel is the current channel between operated on.
     void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
+    void MonolithicRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
 
     // Chain offload using shared memory accelerator invocation.
     // Parameter definitions same as above.
     void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
+    void MonolithicNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
 
     // Copy twiddles factors (with format conversion) from
     // super_twiddles to FIR's twiddle buffer.
