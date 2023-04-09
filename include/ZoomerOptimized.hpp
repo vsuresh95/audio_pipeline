@@ -58,6 +58,8 @@ void AmbisonicZoomer::ProcessOptimized(CBFormat *pBFSrcDst, unsigned nSamples)
 
     audio_t ZoomDivVal = m_fZoomBlend + std::fabs(m_fZoom)*m_AmbFrontMic;
 
+    asm volatile ("fence w, w");
+
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_0+=2, src_1+=2, src_2+=2, src_3+=2, src_4+=2, src_5+=2, src_6+=2, src_7+=2, src_8+=2, src_9+=2, src_10+=2, src_11+=2, src_12+=2, src_13+=2, src_14+=2, src_15+=2)
     {
         audio_t fMic = 0.f;

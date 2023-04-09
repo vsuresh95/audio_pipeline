@@ -25,6 +25,8 @@ void AmbisonicProcessor::ProcessOrder1_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 	src_kY = pBFSrcDst->m_ppfChannels[kY];
 	src_kZ = pBFSrcDst->m_ppfChannels[kZ];
 
+    asm volatile ("fence w, w");
+
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kX+=2, src_kY+=2, src_kZ+=2)
     {
 		SrcData_kX_0.value_64 = read_mem_reqv((void *) src_kX);
@@ -86,6 +88,8 @@ void AmbisonicProcessor::ProcessOrder2_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 	src_kT = pBFSrcDst->m_ppfChannels[kT];
 	src_kU = pBFSrcDst->m_ppfChannels[kU];
 	src_kV = pBFSrcDst->m_ppfChannels[kV];
+
+    asm volatile ("fence w, w");
 
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kR+=2, src_kS+=2, src_kT+=2, src_kU+=2, src_kV+=2)
     {
@@ -194,6 +198,8 @@ void AmbisonicProcessor::ProcessOrder3_3D_Optimized(CBFormat* pBFSrcDst, unsigne
 	src_kL = pBFSrcDst->m_ppfChannels[kL];
 	src_kN = pBFSrcDst->m_ppfChannels[kN];
 	src_kP = pBFSrcDst->m_ppfChannels[kP];
+
+    asm volatile ("fence w, w");
 
     for(unsigned niSample = 0; niSample < nSamples; niSample+=2, src_kQ+=2, src_kO+=2, src_kM+=2, src_kK+=2, src_kL+=2, src_kN+=2, src_kP+=2)
     {
