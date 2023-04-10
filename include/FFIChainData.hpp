@@ -45,7 +45,7 @@ void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
@@ -99,7 +99,7 @@ void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
@@ -207,13 +207,13 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
 			OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
-			DstData.value_64 = read_mem((void *) dst);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 
 		// Second, we simply copy the output (with scaling), sum it
@@ -222,13 +222,13 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		{
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
-			DstData.value_64 = read_mem((void *) dst);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			DstData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 
 		overlap_dst = m_pfOverlap;
@@ -240,7 +240,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		{
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
-			DstData.value_64 = read_mem((void *) dst);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			OverlapData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
@@ -263,7 +263,7 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 	} else {
 		// See init_params() for memory layout.
@@ -275,13 +275,13 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		{
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
-			DstData.value_64 = read_mem_reqodata((void *) dst);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 			DstData.value_32_2 = DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 	}
 }
