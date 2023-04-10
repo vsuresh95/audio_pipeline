@@ -18,7 +18,7 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) 
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
