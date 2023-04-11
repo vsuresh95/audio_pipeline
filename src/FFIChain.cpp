@@ -11,7 +11,7 @@ extern "C" {
 #include <FFIChainDMA.hpp>
 #include <FFIChainMono.hpp>
 
-#ifndef USE_MONOLITHIC_ACC
+#if (USE_MONOLITHIC_ACC == 0)
 void FFIChain::ConfigureAcc() {
     Name = (char *) "FFI CHAIN";
 
@@ -136,7 +136,7 @@ void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, 
 	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
 	// Inform IFFT (producer) - ready for next iteration.
 	sm_sync[ProdRdyFlag] = 1;
-    EndCounter(2);
+    EndCounter(3);
 }
 #endif
 
@@ -280,14 +280,17 @@ void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		printf("Init Data\t = %lu\n", TotalTime[0]/factor);
 		printf("Init Filters\t = %lu\n", TotalTime[1]/factor);
-		printf("Acc execution\t = %llu\n", TotalTime[2]/factor);
+		printf("Acc execution\t = %lu\n", TotalTime[2]/factor);
 		printf("Output Read\t = %lu\n", TotalTime[3]/factor);
 	} else if (DO_PP_CHAIN_OFFLOAD) {
-		printf("Psycho Init Data\t = %lu\n", TotalTime[0]/factor);
-		printf("Psycho Init Filters\t = %lu\n", TotalTime[1]/factor);
-		printf("Psycho Output Read\t = %lu\n", TotalTime[2]/factor);
-		printf("Binaur Init Data\t = %lu\n", TotalTime[3]/factor);
-		printf("Binaur Init Filters\t = %lu\n", TotalTime[4]/factor);
-		printf("Binaur Output Read\t = %lu\n", TotalTime[5]/factor);
+        if (isPsycho) {
+                printf("Psycho Init Data\t = %lu\n", TotalTime[0]/factor);
+                printf("Psycho Init Filters\t = %lu\n", TotalTime[1]/factor);
+                printf("Psycho Output Read\t = %lu\n", TotalTime[2]/factor);
+        } else {
+                printf("Binaur Init Data\t = %lu\n", TotalTime[3]/factor);
+                printf("Binaur Init Filters\t = %lu\n", TotalTime[4]/factor);
+                printf("Binaur Output Read\t = %lu\n", TotalTime[5]/factor);
+        }
 	}
 }

@@ -33,7 +33,7 @@ void FFIChain::InitParams() {
 	// 7*acc_size - 7*acc_size: Twiddle factors
 	// 8*acc_size - 9*acc_size: DMA input
 	// Therefore, NUM_DEVICES+7 = 10.
-    mem_size = acc_size * NUM_DEVICES+7;
+    mem_size = acc_size * (NUM_DEVICES+7);
 
 	// Helper flags for sync flags that the CPU needs to access.
 	// We add a pair of sync flags for FIR filter weights, so that

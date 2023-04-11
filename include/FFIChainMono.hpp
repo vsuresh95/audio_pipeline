@@ -1,7 +1,7 @@
 #ifndef FFICHAINMONO_H
 #define FFICHAINMONO_H
 
-#ifdef USE_MONOLITHIC_ACC
+#if (USE_MONOLITHIC_ACC == 1)
 
 void FFIChain::ConfigureAcc() {
     Name = (char *) "FFI CHAIN";
