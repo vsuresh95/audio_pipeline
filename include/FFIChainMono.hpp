@@ -136,22 +136,22 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 			StartCounter();
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(0);
+			EndCounter(4);
 
 			StartCounter();
 			// Write input data for FIR filters.
 			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
-			EndCounter(1);
+			EndCounter(5);
 
 			// Start and check for termination of each accelerator.
 			StartCounter();
     		esp_run(ffi_cfg_000, 1);
-			EndCounter(2);
+			EndCounter(6);
 
 			// Read back output from IFFT
 			StartCounter();
 			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
-			EndCounter(3);	
+			EndCounter(7);	
 
 			ChannelsLeft--;
 		}
@@ -170,7 +170,7 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 			sm_sync[ConsRdyFlag] = 0;
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(0);
+			EndCounter(4);
 
 			StartCounter();
 			// Wait for FIR (consumer) to be ready.
@@ -183,21 +183,21 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 			sm_sync[FltVldFlag] = 1;
 			// Inform FFT (consumer) to start.
 			sm_sync[ConsVldFlag] = 1;
-			EndCounter(1);			
+			EndCounter(5);			
 
 			StartCounter();
 			// Wait for IFFT (producer) to send output.
 			while (sm_sync[ProdVldFlag] != 1);
 			// Reset flag for next iteration.
 			sm_sync[ProdVldFlag] = 0;
-			EndCounter(2);
+			EndCounter(6);
 
 			// Read back output from IFFT
 			StartCounter();
 			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
 			// Inform IFFT (producer) - ready for next iteration.
 			sm_sync[ProdRdyFlag] = 1;
-			EndCounter(3);	
+			EndCounter(7);	
 
 			ChannelsLeft--;
 		}

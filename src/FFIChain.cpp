@@ -150,24 +150,24 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 			StartCounter();
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(0);
+			EndCounter(4);
 
 			StartCounter();
 			// Write input data for FIR filters.
 			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
-			EndCounter(1);
+			EndCounter(5);
 
 			// Start and check for termination of each accelerator.
 			StartCounter();
 			esp_run(fft_cfg_000, 1);
 			esp_run(fir_cfg_000, 1);
 			esp_run(ifft_cfg_000, 1);
-			EndCounter(2);
+			EndCounter(6);
 
 			// Read back output from IFFT
 			StartCounter();
 			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
-			EndCounter(3);	
+			EndCounter(7);	
 
 			ChannelsLeft--;
 		}
@@ -186,7 +186,7 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 			sm_sync[ConsRdyFlag] = 0;
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(0);
+			EndCounter(4);
 
 			StartCounter();
 			// Wait for FIR (consumer) to be ready.
@@ -199,21 +199,21 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 			sm_sync[FltVldFlag] = 1;
 			// Inform FFT (consumer) to start.
 			sm_sync[ConsVldFlag] = 1;
-			EndCounter(1);			
+			EndCounter(5);			
 
 			StartCounter();
 			// Wait for IFFT (producer) to send output.
 			while (sm_sync[ProdVldFlag] != 1);
 			// Reset flag for next iteration.
 			sm_sync[ProdVldFlag] = 0;
-			EndCounter(2);
+			EndCounter(6);
 
 			// Read back output from IFFT
 			StartCounter();
 			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
 			// Inform IFFT (producer) - ready for next iteration.
 			sm_sync[ProdRdyFlag] = 1;
-			EndCounter(3);	
+			EndCounter(7);	
 
 			ChannelsLeft--;
 		}
@@ -368,10 +368,14 @@ void FFIChain::EndCounter(unsigned Index) {
 
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
-		printf("Init Data\t = %llu\n", TotalTime[0]/factor);
-		printf("Init Filters\t = %llu\n", TotalTime[1]/factor);
-		printf("Acc execution\t = %llu\n", TotalTime[2]/factor);
-		printf("Output Read\t = %llu\n", TotalTime[3]/factor);
+		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+		printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
+		printf("Psycho Acc execution\t = %llu\n", TotalTime[2]/factor);
+		printf("Psycho Output Read\t = %llu\n", TotalTime[3]/factor);
+		printf("Binaur Init Data\t = %llu\n", TotalTime[4]/factor);
+		printf("Binaur Init Filters\t = %llu\n", TotalTime[5]/factor);
+		printf("Binaur Acc execution\t = %llu\n", TotalTime[6]/factor);
+		printf("Binaur Output Read\t = %llu\n", TotalTime[7]/factor);
 	} else if (DO_PP_CHAIN_OFFLOAD) {
 		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 		printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
