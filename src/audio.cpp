@@ -330,7 +330,6 @@ void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
     printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
     printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
     printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
-    printf("\n");
 
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);

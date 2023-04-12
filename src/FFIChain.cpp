@@ -273,9 +273,6 @@ void FFIChain::EndCounter(unsigned Index) {
 }
 
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
-    printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM FFI CHAIN\n");
-    printf("---------------------------------------------\n");
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		printf("Init Data\t = %llu\n", TotalTime[0]/factor);
 		printf("Init Filters\t = %llu\n", TotalTime[1]/factor);
@@ -284,9 +281,11 @@ void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
 	} else if (DO_PP_CHAIN_OFFLOAD) {
 		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 		printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
+		printf("Psycho Acc execution\t = 0\n");
 		printf("Psycho Output Read\t = %llu\n", TotalTime[2]/factor);
 		printf("Binaur Init Data\t = %llu\n", TotalTime[3]/factor);
 		printf("Binaur Init Filters\t = %llu\n", TotalTime[4]/factor);
+		printf("Binaur Acc execution\t = 0\n");
 		printf("Binaur Output Read\t = %llu\n", TotalTime[5]/factor);
 	}
 }
