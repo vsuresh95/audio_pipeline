@@ -340,12 +340,20 @@ void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
     }
 }
 
-void OffloadChain(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, float* m_pfScratchBufferA, unsigned CurChannel, unsigned m_nOverlapLength, bool IsSharedMemory) {
+void OffloadPsychoChain(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {
     FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
     if (IsSharedMemory)
-        FFIChainInstHandle->NonPipelineProcess(pBFSrcDst, m_Filters, (audio_t *) m_pfScratchBufferA, CurChannel, true);
+        FFIChainInstHandle->PsychoNonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
     else
-        FFIChainInstHandle->RegularProcess(pBFSrcDst, m_Filters, (audio_t *) m_pfScratchBufferA, CurChannel, false);
+        FFIChainInstHandle->PsychoRegularProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+}
+
+void OffloadBinaurChain(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_ppcpFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {
+    FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
+    if (IsSharedMemory)
+        FFIChainInstHandle->BinaurNonPipelineProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+    else
+        FFIChainInstHandle->BinaurRegularProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
 }
 
 void OffloadPsychoPipeline(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength) {
