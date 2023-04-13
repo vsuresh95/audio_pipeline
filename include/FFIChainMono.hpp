@@ -56,66 +56,184 @@ void FFIChain::StartAcc() {
 	FFIInst.StartAcc();
 }
 
-void FFIChain::RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
-    StartCounter();
-	// Write input data for FFT.
-	InitData(pBFSrcDst, CurChannel, IsInit);
-    EndCounter(0);
+void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
+	unsigned ChannelsLeft = m_nChannelCount;
 
-    StartCounter();
-	// Write input data for FIR filters.
-	InitFilters(pBFSrcDst, m_Filters);
-    EndCounter(1);
+	while (ChannelsLeft != 0) {
+		WriteScratchReg(0x2);
+		StartCounter();
+		// Write input data for FFT.
+		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+		EndCounter(0);
+		WriteScratchReg(0);
 
-    StartCounter();
-	// Start and check for termination of each accelerator.
-	FFIInst.StartAcc();
-	FFIInst.TerminateAcc();
-    EndCounter(2);
+		unsigned iChannelOrder = int(sqrt(m_nChannelCount - ChannelsLeft));
 
-    StartCounter();
-	// Read back output from IFFT.
-	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
-    EndCounter(3);
+		WriteScratchReg(0x4);
+		StartCounter();
+		// Write input data for FIR filters.
+		InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+		EndCounter(1);
+		WriteScratchReg(0);
+
+		StartCounter();
+		// Start and check for termination of each accelerator.
+		FFIInst.StartAcc();
+		FFIInst.TerminateAcc();
+		EndCounter(2);
+
+		WriteScratchReg(0x8);
+		StartCounter();
+		// Read back output from IFFT.
+		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
+		EndCounter(3);
+		WriteScratchReg(0);
+
+		ChannelsLeft--;
+	}
 }
 
-void FFIChain::NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit) {
-    StartCounter();
-	// Wait for FFT (consumer) to be ready.
-	while (sm_sync[ConsRdyFlag] != 1);
-	// Reset flag for next iteration.
-	sm_sync[ConsRdyFlag] = 0;
-	// Write input data for FFT.
-	InitData(pBFSrcDst, CurChannel, IsInit);
-    EndCounter(0);
+void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
+	unsigned ChannelsLeft = m_nChannelCount;
 
-    StartCounter();
-	// Wait for FIR (consumer) to be ready.
-	while (sm_sync[FltRdyFlag] != 1);
-	// Reset flag for next iteration.
-	sm_sync[FltRdyFlag] = 0;
-	// Write input data for FIR filters.
-	InitFilters(pBFSrcDst, m_Filters);
-	// Inform FIR (consumer) of filters ready.
-	sm_sync[FltVldFlag] = 1;
-	// Inform FFT (consumer) to start.
-	sm_sync[ConsVldFlag] = 1;
-    EndCounter(1);
+	while (ChannelsLeft != 0) {
+		WriteScratchReg(0x2);
+		StartCounter();
+		// Wait for FFT (consumer) to be ready.
+		while (sm_sync[ConsRdyFlag] != 1);
+		// Reset flag for next iteration.
+		sm_sync[ConsRdyFlag] = 0;
+		// Write input data for FFT.
+		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+		EndCounter(0);
+		WriteScratchReg(0);
 
-    StartCounter();
-	// Wait for IFFT (producer) to send output.
-	while (sm_sync[ProdVldFlag] != 1);
-	// Reset flag for next iteration.
-	sm_sync[ProdVldFlag] = 0;
-    EndCounter(2);
+		unsigned iChannelOrder = int(sqrt(m_nChannelCount - ChannelsLeft));
 
-    StartCounter();
-	// Read back output from IFFT
-	ReadOutput(pBFSrcDst, m_pfScratchBufferA);
-	// Inform IFFT (producer) - ready for next iteration.
-	sm_sync[ProdRdyFlag] = 1;
-    EndCounter(3);
+		WriteScratchReg(0x4);
+		StartCounter();
+		// Wait for FIR (consumer) to be ready.
+		while (sm_sync[FltRdyFlag] != 1);
+		// Reset flag for next iteration.
+		sm_sync[FltRdyFlag] = 0;
+		// Write input data for FIR filters.
+		InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+		// Inform FIR (consumer) of filters ready.
+		sm_sync[FltVldFlag] = 1;
+		// Inform FFT (consumer) to start.
+		sm_sync[ConsVldFlag] = 1;
+		EndCounter(1);
+		WriteScratchReg(0);
+
+		StartCounter();
+		// Wait for IFFT (producer) to send output.
+		while (sm_sync[ProdVldFlag] != 1);
+		// Reset flag for next iteration.
+		sm_sync[ProdVldFlag] = 0;
+		EndCounter(2);
+
+		WriteScratchReg(0x8);
+		// Read back output from IFFT
+		StartCounter();
+		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
+		// Inform IFFT (producer) - ready for next iteration.
+		sm_sync[ProdRdyFlag] = 1;
+		EndCounter(3);	
+		WriteScratchReg(0);
+
+		ChannelsLeft--;
+	}
 }
+
+void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned ChannelsLeft = m_nChannelCount;
+
+		while (ChannelsLeft != 0) {
+			WriteScratchReg(0x100);
+			StartCounter();
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, false);
+			EndCounter(4);
+			WriteScratchReg(0);
+
+			WriteScratchReg(0x200);
+			StartCounter();
+			// Write input data for FIR filters.
+			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
+			EndCounter(5);
+			WriteScratchReg(0);
+
+			// Start and check for termination of each accelerator.
+			StartCounter();
+			FFIInst.StartAcc();
+			FFIInst.TerminateAcc();
+			EndCounter(6);
+
+			WriteScratchReg(0x400);
+			StartCounter();
+			// Read back output from IFFT
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			EndCounter(7);	
+			WriteScratchReg(0);
+
+			ChannelsLeft--;
+		}
+	}
+}
+
+void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned ChannelsLeft = m_nChannelCount;
+
+		while (ChannelsLeft != 0) {
+			WriteScratchReg(0x100);
+			StartCounter();
+			// Wait for FFT (consumer) to be ready.
+			while (sm_sync[ConsRdyFlag] != 1);
+			// Reset flag for next iteration.
+			sm_sync[ConsRdyFlag] = 0;
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+			EndCounter(4);
+			WriteScratchReg(0);
+
+			WriteScratchReg(0x200);
+			StartCounter();
+			// Wait for FIR (consumer) to be ready.
+			while (sm_sync[FltRdyFlag] != 1);
+			// Reset flag for next iteration.
+			sm_sync[FltRdyFlag] = 0;
+			// Write input data for FIR filters.
+			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
+			// Inform FIR (consumer) of filters ready.
+			sm_sync[FltVldFlag] = 1;
+			// Inform FFT (consumer) to start.
+			sm_sync[ConsVldFlag] = 1;
+			EndCounter(5);			
+			WriteScratchReg(0);
+
+			StartCounter();
+			// Wait for IFFT (producer) to send output.
+			while (sm_sync[ProdVldFlag] != 1);
+			// Reset flag for next iteration.
+			sm_sync[ProdVldFlag] = 0;
+			EndCounter(6);
+
+			WriteScratchReg(0x400);
+			StartCounter();
+			// Read back output from IFFT
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			// Inform IFFT (producer) - ready for next iteration.
+			sm_sync[ProdRdyFlag] = 1;
+			EndCounter(7);	
+			WriteScratchReg(0);
+
+			ChannelsLeft--;
+		}
+	}
+}
+
 #endif // USE_MONOLITHIC_ACC
 
 #endif // FFICHAINMONO_H

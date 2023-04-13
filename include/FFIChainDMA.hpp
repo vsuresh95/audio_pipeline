@@ -64,7 +64,7 @@ void FFIChain::PsychoProcessDMA(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, a
 				sm_sync[FltRdyFlag] = 0;
 				sm_sync[DMARdyFlag] = 0;
 
-  	         	unsigned iChannelOrder = int(sqrt(m_nChannelCount - FilterChannelsLeft));
+  	         	unsigned iChannelOrder = unsigned(sqrt(m_nChannelCount - FilterChannelsLeft));
 
 				// Offload filter weights loading process to DMA
 				DMAInst.StorePsychoFilters(iChannelOrder);
@@ -142,7 +142,7 @@ void FFIChain::BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_
 					// Read back output
 					WriteScratchReg(0x400);
         			StartCounter();
-					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1));
+					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1), (OutputChannelsLeft == m_nChannelCount));
     				asm volatile ("fence w, w");
         			EndCounter(5);
 					WriteScratchReg(0);
