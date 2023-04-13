@@ -151,28 +151,25 @@ void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
     } else {
         ShelfFilterOrder(pBFSrcDst, nSamples);
     }
+
+    StartCounter();
 	WriteScratchReg(0x10);
     if(m_nOrder >= 1) {
-        StartCounter();
         // ProcessOrder1_3D(pBFSrcDst, nSamples);
         ProcessOrder1_3D_Optimized(pBFSrcDst, nSamples);
-        EndCounter(3);
     }
 	WriteScratchReg(0);
 	WriteScratchReg(0x20);
     if(m_nOrder >= 2) {
-        StartCounter();
         ProcessOrder2_3D_Optimized(pBFSrcDst, nSamples);
-        EndCounter(4);
     }
 	WriteScratchReg(0);
 	WriteScratchReg(0x40);
     if(m_nOrder >= 3) {
-        StartCounter();
         ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
-        EndCounter(5);
     }
 	WriteScratchReg(0);
+    EndCounter(3);
 }
 
 void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples)
@@ -412,6 +409,4 @@ void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, true);
     }
-
-    printf("\n");
 }

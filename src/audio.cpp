@@ -136,12 +136,11 @@ void ABAudio::processBlock() {
 
 void ABAudio::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM %s\n", Name);
+    printf("RESULTS\n");
     printf("---------------------------------------------\n");
     printf("Psycho Filter\t = %lu\n", TotalTime[0]/factor);
     printf("Zoomer Process\t = %lu\n", TotalTime[1]/factor);
     printf("Binaur Filter\t = %lu\n", TotalTime[2]/factor);
-    printf("\n");
 
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);

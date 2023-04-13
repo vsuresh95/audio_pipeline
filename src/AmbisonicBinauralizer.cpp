@@ -172,6 +172,4 @@ void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, false);
     }
-
-    printf("\n");
 }
