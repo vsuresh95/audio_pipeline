@@ -121,12 +121,12 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
             .fDistance  = 1
         });
 
-        soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
-        soundSrcs.back().setSrcPos({
-            .fAzimuth   = 1.0f,
-            .fElevation = 0.0f,
-            .fDistance  = 5
-        });
+        // soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
+        // soundSrcs.back().setSrcPos({
+        //     .fAzimuth   = 1.0f,
+        //     .fElevation = 0.0f,
+        //     .fDistance  = 5
+        // });
     } else {
         for (unsigned int i = 0U; i < NUM_SRCS; i++) {
 
@@ -152,11 +152,24 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::DECODE) {
         readNEncode(sumBF);
-    }
+    }    
+    
+    // for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
+    //     for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
+    //         sumBF.m_ppfChannels[niChannel][niSample] = 0.001 * (niSample % 100);
+    //     }
+    // }
 
     if (processType != ILLIXR_AUDIO::ABAudio::ProcessType::ENCODE) {
         /// Processing garbage data if just decoding
         rotateNZoom(sumBF);
+            
+        // for(unsigned niChannel = 0; niChannel < sumBF.m_nChannelCount; niChannel++) {
+        //     for(unsigned niSample = 0; niSample < sumBF.m_nSamples; niSample++) {
+        //         sumBF.m_ppfChannels[niChannel][niSample] = 0.001 * (niSample % 100);
+        //     }
+        // }
+
         StartCounter();
         decoder.Process(&sumBF, resultSample);
         EndCounter(2);
@@ -165,6 +178,16 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
         writeFile(resultSample);
     }
+
+    // for(unsigned niEar = 0; niEar < 2; niEar++) {
+    //     std::cout << "  {" << std::endl << "    ";
+    //     // std::cout << "resultSample[" << niEar << "]:" << std::endl;
+    //     for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
+    //         std::cout << resultSample[niEar][niSample] << ", ";
+    //         if ((niSample + 1) % 8 == 0) std::cout << std::endl << "    ";
+    //     }
+    //     std::cout << std::endl << "  }," << std::endl;
+    // }
 
     if (num_blocks_left > 0) {
         num_blocks_left--;

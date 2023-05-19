@@ -21,7 +21,7 @@ typedef int device_t;
 #define FIXED_TO_FLOAT_WRAP(x, y) x
 #else
 #include <fixed_point.h>
-#define AUDIO_FX_IL 4
+#define AUDIO_FX_IL 14
 #define FLOAT_TO_FIXED_WRAP(x, y) float_to_fixed32(x, y)
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
 #endif
@@ -164,7 +164,8 @@ public:
     // In case of pipelined operation, this function
     // replaces ReadOutput. It performs ReadOutput,
     // as well as the overlap operation.
-    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst);
+    // void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst);
+    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst, unsigned CurChannel = 0);
 
     // Handle pipelined operation of binauralizer filter.
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
