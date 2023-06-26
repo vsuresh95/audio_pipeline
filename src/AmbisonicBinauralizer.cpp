@@ -71,7 +71,7 @@ void AmbisonicBinauralizer::Configure(unsigned nSampleRate, unsigned nBlockSize,
 
     // Initialize Binauralizer filter values. We intitialize random data
     // instead of calculating them as in the Linux app.
-#ifndef NO_DATA_INIT
+#if (DO_DATA_INIT == 1)
     for(unsigned niEar = 0; niEar < 2; niEar++) {
         for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++) {
             for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
@@ -101,7 +101,21 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
     if (DO_PP_CHAIN_OFFLOAD) {
         StartCounter();
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        if (USE_AUDIO_DMA) {
+            FFIChainInst.BinaurProcessDMA(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        } else {
+            FFIChainInst.BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        }
+        EndCounter(0);
+    } else if (DO_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.BinaurRegularProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+        EndCounter(0);
+    } else if (DO_NP_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.BinaurNonPipelineProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
         EndCounter(0);
     } else {
         for(niEar = 0; niEar < 2; niEar++)
@@ -111,39 +125,27 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
             {
                 // Offload to regular invocation accelerators, or shared memory
                 // invocation accelerators, or SW as per compiler flags.
-                if (DO_CHAIN_OFFLOAD) {
-                    StartCounter();
-                    FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                    FFIChainInst.RegularProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel, false);
-                    EndCounter(0);
-                } else if (DO_NP_CHAIN_OFFLOAD) {
-                    StartCounter();
-                    FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                    FFIChainInst.NonPipelineProcess(pBFSrc, m_ppcpFilters[niEar][niChannel], m_pfScratchBufferB, niChannel, false);
-                    EndCounter(0);
-                } else {
-                    memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-                    MyMemset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+                memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+                MyMemset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
 
-                    StartCounter();
-                    kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
-                    EndCounter(0);
+                StartCounter();
+                kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+                EndCounter(0);
 
-                    StartCounter();
-                    for(ni = 0; ni < m_nFFTBins; ni++)
-                    {
-                        cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
-                                    - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
-                        cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
-                                    + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
-                        m_pcpScratch[ni] = cpTemp;
-                    }
-                    EndCounter(1);
-
-                    StartCounter();
-                    kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
-                    EndCounter(2);
+                StartCounter();
+                for(ni = 0; ni < m_nFFTBins; ni++)
+                {
+                    cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
+                                - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
+                    cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
+                                + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
+                    m_pcpScratch[ni] = cpTemp;
                 }
+                EndCounter(1);
+
+                StartCounter();
+                kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
+                EndCounter(2);
 
                 for(ni = 0; ni < m_nFFTSize; ni++)
                     m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];
@@ -159,22 +161,15 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
 }
 
 void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
-    printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM %s\n", Name);
-    printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        printf("Binaur Chain\t = %lu\n", TotalTime[0]/factor);
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        printf("Binaur Chain Total\t = %llu\n", TotalTime[0]/factor);
     } else {
-        printf("Binaur FFT\t = %lu\n", TotalTime[0]/factor);
-        printf("Binaur FIR\t = %lu\n", TotalTime[1]/factor);
-        printf("Binaur IFFT\t = %lu\n", TotalTime[2]/factor);
+        printf("Binaur FFT\t = %llu\n", TotalTime[0]/factor);
+        printf("Binaur FIR\t = %llu\n", TotalTime[1]/factor);
+        printf("Binaur IFFT\t = %llu\n", TotalTime[2]/factor);
     }
 
-    if (DO_NP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor);
-    } else if (DO_PP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, false);
     }
-
-    printf("\n");
 }

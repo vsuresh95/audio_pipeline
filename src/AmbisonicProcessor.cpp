@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cstring>
 #include <AmbisonicProcessor.hpp>
+#include <RotateOrderOptimized.hpp>
 
 #if (USE_REAL_DATA == 1)
 #include <m_ppcpPsychFilters.hpp>
@@ -70,7 +71,7 @@ void AmbisonicProcessor::Configure(unsigned nBlockSize, unsigned nChannels) {
 
     // Initialize Psychoacoustic filter values. We intitialize random data
     // instead of calculating them as in the Linux app.
-#ifndef NO_DATA_INIT
+#if (DO_DATA_INIT == 1)
     for(unsigned niChannel = 0; niChannel < NORDER+1; niChannel++) {
         for(unsigned niSample = 0; niSample < m_nFFTBins; niSample++) {
         #if (USE_REAL_DATA == 1)
@@ -128,28 +129,47 @@ void AmbisonicProcessor::updateRotation() {
 }
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
-    ShelfFilterOrder(pBFSrcDst, nSamples);
+    if (DO_PP_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        if (USE_AUDIO_DMA) {
+            FFIChainInst.PsychoProcessDMA(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        } else {
+            FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        }
+        EndCounter(0);
+    } else if (DO_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.PsychoRegularProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        EndCounter(0);
+    } else if (DO_NP_CHAIN_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.PsychoNonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        EndCounter(0);
+    } else {
+        ShelfFilterOrder(pBFSrcDst, nSamples);
+    }
+
+    StartCounter();
 	WriteScratchReg(0x10);
     if(m_nOrder >= 1) {
-        StartCounter();
-        ProcessOrder1_3D(pBFSrcDst, nSamples);
-        EndCounter(3);
+        // ProcessOrder1_3D(pBFSrcDst, nSamples);
+        ProcessOrder1_3D_Optimized(pBFSrcDst, nSamples);
     }
 	WriteScratchReg(0);
 	WriteScratchReg(0x20);
     if(m_nOrder >= 2) {
-        StartCounter();
-        ProcessOrder2_3D(pBFSrcDst, nSamples);
-        EndCounter(4);
+        ProcessOrder2_3D_Optimized(pBFSrcDst, nSamples);
     }
 	WriteScratchReg(0);
 	WriteScratchReg(0x40);
     if(m_nOrder >= 3) {
-        StartCounter();
-        ProcessOrder3_3D(pBFSrcDst, nSamples);
-        EndCounter(5);
+        ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
     }
 	WriteScratchReg(0);
+    EndCounter(3);
 }
 
 void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples)
@@ -330,90 +350,63 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
     // For all other channels shelf filters are used
 
     // Offload the entire task to be pipelined using shared memory.
-    if (DO_PP_CHAIN_OFFLOAD) {
+    MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
+
+    for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
+    {
+        iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
+
+        // Offload to regular invocation accelerators, or shared memory
+        // invocation accelerators, or SW as per compiler flags.
+        memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
+        MyMemset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+
         StartCounter();
-        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+        kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
         EndCounter(0);
-    } else {
-        MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
 
-        for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
+        // Perform the convolution in the frequency domain
+        StartCounter();
+        for(unsigned ni = 0; ni < m_nFFTBins; ni++)
         {
-            iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
-
-            // Offload to regular invocation accelerators, or shared memory
-            // invocation accelerators, or SW as per compiler flags.
-            if (DO_CHAIN_OFFLOAD) {
-                StartCounter();
-                FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                FFIChainInst.RegularProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel, true);
-                EndCounter(0);
-            } else if (DO_NP_CHAIN_OFFLOAD) {
-                StartCounter();
-                FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-                FFIChainInst.NonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters[iChannelOrder], m_pfScratchBufferA, niChannel, true);
-                EndCounter(0);
-            } else {
-                memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-                MyMemset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
-
-                StartCounter();
-                kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
-                EndCounter(0);
-
-                // Perform the convolution in the frequency domain
-                StartCounter();
-                for(unsigned ni = 0; ni < m_nFFTBins; ni++)
-                {
-                    cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
-                                - m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].i;
-                    cpTemp.i = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].i
-                                + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
-                    m_pcpScratch[ni] = cpTemp;
-                }
-                EndCounter(1);
-
-                // Convert from frequency domain back to time domain
-                StartCounter();
-                kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
-                EndCounter(2);
-            }
-
-            for(unsigned ni = 0; ni < m_nFFTSize; ni++)
-                m_pfScratchBufferA[ni] *= m_fFFTScaler;
-
-            memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
-
-            for(unsigned ni = 0; ni < m_nOverlapLength; ni++) {
-                pBFSrcDst->m_ppfChannels[niChannel][ni] += m_pfOverlap[niChannel][ni];
-            }
-
-            memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
+            cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
+                        - m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].i;
+            cpTemp.i = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].i
+                        + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
+            m_pcpScratch[ni] = cpTemp;
         }
+        EndCounter(1);
+
+        // Convert from frequency domain back to time domain
+        StartCounter();
+        kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
+        EndCounter(2);
+
+        for(unsigned ni = 0; ni < m_nFFTSize; ni++)
+            m_pfScratchBufferA[ni] *= m_fFFTScaler;
+
+        memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
+
+        for(unsigned ni = 0; ni < m_nOverlapLength; ni++) {
+            pBFSrcDst->m_ppfChannels[niChannel][ni] += m_pfOverlap[niChannel][ni];
+        }
+
+        memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
     }
+    
 }
 
 void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
-    printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM %s\n", Name);
-    printf("---------------------------------------------\n");
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        printf("Psycho Chain\t = %lu\n", TotalTime[0]/factor);
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        printf("Psycho Chain Total\t = %llu\n", TotalTime[0]/factor);
     } else {
-        printf("Psycho FFT\t = %lu\n", TotalTime[0]/factor);
-        printf("Psycho FIR\t = %lu\n", TotalTime[1]/factor);
-        printf("Psycho IFFT\t = %lu\n", TotalTime[2]/factor);
+        printf("Psycho FFT\t = %llu\n", TotalTime[0]/factor);
+        printf("Psycho FIR\t = %llu\n", TotalTime[1]/factor);
+        printf("Psycho IFFT\t = %llu\n", TotalTime[2]/factor);
     }
-    printf("Rotate O1\t = %lu\n", TotalTime[3]/factor);
-    printf("Rotate O2\t = %lu\n", TotalTime[4]/factor);
-    printf("Rotate O3\t = %lu\n", TotalTime[5]/factor);
+    printf("Rotate Order\t = %llu\n", TotalTime[3]/factor);
 
-    if (DO_NP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor);
-    } else if (DO_PP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor, true);
     }
-
-    printf("\n");
 }

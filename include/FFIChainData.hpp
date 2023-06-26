@@ -2,7 +2,7 @@
 #define FFI_CHAIN_DATA
 
 void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) {
-	int InitLength = m_nBlockSize;
+	unsigned InitLength = m_nBlockSize;
 	audio_token_t SrcData;
 	audio_t* src;
 	device_token_t DstData;
@@ -15,32 +15,21 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) 
 	// We coalesce 4B elements to 8B accesses for 2 reasons:
 	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
 	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	if (IsInit) {
-		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-		{
-			DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
-			DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(myRand(), AUDIO_FX_IL);
+	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
+	{
+		// Need to cast to void* for extended ASM code.
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
-			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
-		}
-	} else {
-		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
-		{
-			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
+		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
-			DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-			DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
-		}
+		// Need to cast to void* for extended ASM code.
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 }
 
 void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
-	int InitLength = 2 * m_nFFTBins;
+	unsigned InitLength = 2 * m_nFFTBins;
 	audio_token_t SrcData;
 	audio_t* src;
 	device_token_t DstData;
@@ -56,18 +45,18 @@ void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 }
 
 void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA) {
-	int ReadLength = m_nBlockSize + m_nOverlapLength;
+	unsigned ReadLength = m_nBlockSize + m_nOverlapLength;
 	device_token_t SrcData;
 	device_t* src;
 	audio_token_t DstData;
@@ -83,7 +72,7 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA) {
 	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqodata((void *) src);
 
 		DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
@@ -94,7 +83,7 @@ void FFIChain::ReadOutput(CBFormat* pBFSrcDst, audio_t* m_pfScratchBufferA) {
 }
 
 void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
-	int InitLength = m_nBlockSize;
+	unsigned InitLength = m_nBlockSize;
 	audio_token_t SrcData;
 	audio_t* src;
 	device_token_t DstData;
@@ -110,19 +99,19 @@ void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqv((void *) src);
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 }
 
 void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigned CurChannel) {
-	int ReadLength = m_nBlockSize;
-	int OverlapLength = m_nOverlapLength;
+	unsigned ReadLength = m_nBlockSize;
+	unsigned OverlapLength = m_nOverlapLength;
 	device_token_t SrcData;
 	device_t* src;
 	audio_token_t DstData;
@@ -144,27 +133,27 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 	for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
-		OverlapData.value_64 = read_mem((void *) overlap_dst);
+		SrcData.value_64 = read_mem_reqodata((void *) src);
+		OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 
 		DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 
 	// Second, we simply copy the output (with scaling) as we are outside the overlap range.
 	for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqodata((void *) src);
 
 		DstData.value_32_1 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst, DstData.value_64);
+		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
 
 	overlap_dst = m_pfOverlap[CurChannel];
@@ -174,19 +163,19 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 	for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData.value_64 = read_mem((void *) src);
+		SrcData.value_64 = read_mem_reqodata((void *) src);
 
 		OverlapData.value_32_1 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		OverlapData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) overlap_dst, OverlapData.value_64);
+		write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
 	}
 }
 
-void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast) {
-	int ReadLength =  m_nBlockSize;
-	int OverlapLength = m_nOverlapLength;
+void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst) {
+	unsigned ReadLength =  m_nBlockSize;
+	unsigned OverlapLength = m_nOverlapLength;
 	device_token_t SrcData;
 	device_t* src;
 	audio_token_t DstData;
@@ -216,15 +205,15 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
-			OverlapData.value_64 = read_mem((void *) overlap_dst);
-			DstData.value_64 = read_mem((void *) dst);
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+			OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 
 		// Second, we simply copy the output (with scaling), sum it
@@ -232,14 +221,14 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
-			DstData.value_64 = read_mem((void *) dst);
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			DstData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 
 		overlap_dst = m_pfOverlap;
@@ -250,14 +239,31 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
-			DstData.value_64 = read_mem((void *) dst);
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			OverlapData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
 			OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) overlap_dst, OverlapData.value_64);
+			write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
+		}
+	} else if (isFirst) {
+		// See init_params() for memory layout.
+		src = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
+		dst = ppfDst;
+
+		// Here, we simply copy the output, sum it with the previous outputs.
+		for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
+		{
+			// Need to cast to void* for extended ASM code.
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+
+			DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+			DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
+
+			// Need to cast to void* for extended ASM code.
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 	} else {
 		// See init_params() for memory layout.
@@ -265,17 +271,17 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 		dst = ppfDst;
 
 		// Here, we simply copy the output, sum it with the previous outputs.
-		for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
+		for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
 		{
 			// Need to cast to void* for extended ASM code.
-			SrcData.value_64 = read_mem((void *) src);
-			DstData.value_64 = read_mem((void *) dst);
+			SrcData.value_64 = read_mem_reqodata((void *) src);
+			DstData.value_64 = read_mem_reqv((void *) dst);
 
 			DstData.value_32_1 = DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 			DstData.value_32_2 = DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 			// Need to cast to void* for extended ASM code.
-			write_mem((void *) dst, DstData.value_64);
+			write_mem_wtfwd((void *) dst, DstData.value_64);
 		}
 	}
 }

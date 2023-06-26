@@ -1,39 +1,7 @@
 #ifndef FFI_CHAIN_HELPER
 #define FFI_CHAIN_HELPER
 
-// Helper function to perform memory write using Spandex request types.
-// By default, the writes are regular stores.
-// See CohDefines.hpp for definition of WRITE_CODE.
-static inline void write_mem (void* dst, int64_t value_64)
-{
-	asm volatile (
-		"mv t0, %0;"
-		"mv t1, %1;"
-		".word " QU(WRITE_CODE)
-		:
-		: "r" (dst), "r" (value_64)
-		: "t0", "t1", "memory"
-	);
-}
-
-// Helper function to perform memory read using Spandex request types.
-// By default, the reads are regular loads.
-// See CohDefines.hpp for definition of READ_CODE.
-static inline int64_t read_mem (void* dst)
-{
-	int64_t value_64;
-
-	asm volatile (
-		"mv t0, %1;"
-		".word " QU(READ_CODE) ";"
-		"mv %0, t1"
-		: "=r" (value_64)
-		: "r" (dst)
-		: "t0", "t1", "memory"
-	);
-
-	return value_64;
-}
+#include <ReadWriteCodeHelper.hpp>
 
 void FFIChain::InitParams() {
 	// Number of samples for the FFT or FIR accelerator. (1024)
@@ -63,8 +31,9 @@ void FFIChain::InitParams() {
 	// 4*acc_size - 5*acc_size: Unused
 	// 5*acc_size - 7*acc_size: FIR filters
 	// 7*acc_size - 7*acc_size: Twiddle factors
-	// Therefore, NUM_DEVICES+5 = 8.
-    mem_size = acc_size * NUM_DEVICES+5;
+	// 8*acc_size - 9*acc_size: DMA input
+	// Therefore, NUM_DEVICES+7 = 10.
+    mem_size = acc_size * (NUM_DEVICES+7);
 
 	// Helper flags for sync flags that the CPU needs to access.
 	// We add a pair of sync flags for FIR filter weights, so that
@@ -75,6 +44,8 @@ void FFIChain::InitParams() {
 	FltVldFlag = 1*acc_len + FLT_VALID_FLAG_OFFSET;
 	ProdRdyFlag = 3*acc_len + READY_FLAG_OFFSET;
 	ProdVldFlag = 3*acc_len + VALID_FLAG_OFFSET;
+	DMARdyFlag = 8*acc_len + READY_FLAG_OFFSET;
+	DMAVldFlag = 8*acc_len + VALID_FLAG_OFFSET;
 }
 
 void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {

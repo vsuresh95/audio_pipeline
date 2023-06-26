@@ -1,26 +1,25 @@
-#ifndef FFTACC_H
-#define FFTACC_H
+#ifndef FFIACC_H
+#define FFIACC_H
 
 /* User defined registers */
 /* <<--regs-->> */
-#define AUDIO_FFT_DO_INVERSE_REG 0x48
-#define AUDIO_FFT_LOGN_SAMPLES_REG 0x44
-#define AUDIO_FFT_DO_SHIFT_REG 0x40
+#define AUDIO_FFI_DO_INVERSE_REG 0x48
+#define AUDIO_FFI_LOGN_SAMPLES_REG 0x44
+#define AUDIO_FFI_DO_SHIFT_REG 0x40
 
-#define SLD_AUDIO_FFT 0x055
-#define FFT_DEV_NAME "sld,audio_fft_stratus"
+#define SLD_AUDIO_FFI 0x057
+#define FFI_DEV_NAME "sld,audio_ffi_stratus"
 
-class FFTAcc {
+class FFIAcc {
 public:
     /* <<--Device pointers-->> */
     int nDev;
     struct esp_device *espdevs;
-    struct esp_device *FFTDev;
+    struct esp_device *FFIDev;
 
     /* <<--Device params-->> */
     unsigned **ptable;
 
-    unsigned inverse;
     unsigned logn_samples;
 
     unsigned mem_size;
@@ -38,4 +37,4 @@ public:
     void TerminateAcc();
 };
 
-#endif // FFTACC_H
+#endif // FFIACC_H

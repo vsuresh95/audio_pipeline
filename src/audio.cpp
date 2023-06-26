@@ -20,10 +20,10 @@ void ABAudio::Configure() {
 
     // Allocate memory and initialize final result buffer.
     resultSample = (audio_t **) aligned_malloc(2 * sizeof(audio_t *));
-    resultSample[0] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-    resultSample[1] = (audio_t *) aligned_malloc(BLOCK_SIZE * sizeof(audio_t));
-    MyMemset(resultSample[0], 0, BLOCK_SIZE * sizeof(audio_t));
-    MyMemset(resultSample[1], 0, BLOCK_SIZE * sizeof(audio_t));
+    resultSample[0] = (audio_t *) aligned_malloc((BLOCK_SIZE + decoder.m_nOverlapLength) * sizeof(audio_t));
+    resultSample[1] = (audio_t *) aligned_malloc((BLOCK_SIZE + decoder.m_nOverlapLength) * sizeof(audio_t));
+    MyMemset(resultSample[0], 0, (BLOCK_SIZE + decoder.m_nOverlapLength) * sizeof(audio_t));
+    MyMemset(resultSample[1], 0, (BLOCK_SIZE + decoder.m_nOverlapLength) * sizeof(audio_t));
 
     // Configure and initialize parameters for Bformat data object,
     // which holds the data for each channel throughout the pipeline.
@@ -46,19 +46,26 @@ void ABAudio::Configure() {
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
 
+    	// Write input data for psycho twiddle factors
+    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
+    
+        // For shared memory invocation cases, we can
+        // start the accelerators (to start polling).
+        if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+            FFIChainInst.StartAcc();
+
+            // Use the DMA to load all inputs and filter weights
+            // into its private scratchpad.
+            if (USE_AUDIO_DMA) {
+                FFIChainInst.ConfigureDMA();
+            }
+        }
+
         // Assign the configured accelerator object to both rotator and decoder.
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
+    }
 
-    	// Write input data for psycho twiddle factors
-    	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
-    }
-    
-    // For shared memory invocation cases, we can
-    // start the accelerators (to start polling).
-    if (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.StartAcc();
-    }
 }
 
 void ABAudio::loadSource() {
@@ -91,7 +98,7 @@ void ABAudio::processBlock() {
 	WriteScratchReg(0x80);
     StartCounter();
     zoomer.updateZoom();
-    zoomer.Process(&sumBF, BLOCK_SIZE);
+    zoomer.ProcessOptimized(&sumBF, BLOCK_SIZE);
     EndCounter(1);
 	WriteScratchReg(0);
 
@@ -129,12 +136,11 @@ void ABAudio::processBlock() {
 
 void ABAudio::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM %s\n", Name);
+    printf("RESULTS\n");
     printf("---------------------------------------------\n");
     printf("Psycho Filter\t = %lu\n", TotalTime[0]/factor);
     printf("Zoomer Process\t = %lu\n", TotalTime[1]/factor);
     printf("Binaur Filter\t = %lu\n", TotalTime[2]/factor);
-    printf("\n");
 
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);

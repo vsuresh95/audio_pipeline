@@ -7,7 +7,7 @@
 #define AUDIO_FIR_LOGN_SAMPLES_REG 0x44
 #define AUDIO_FIR_DO_SHIFT_REG 0x40
 
-#define SLD_AUDIO_FIR 0x055
+#define SLD_AUDIO_FIR 0x056
 #define FIR_DEV_NAME "sld,audio_fir_stratus"
 
 class FIRAcc {

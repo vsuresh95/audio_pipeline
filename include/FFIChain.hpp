@@ -6,11 +6,14 @@
 
 #include <FFTAcc.hpp>
 #include <FIRAcc.hpp>
+#include <FFIAcc.hpp>
 
 #include <kiss_fftr.hpp>
 #include <BFormat.hpp>
 
 #include <AudioBase.hpp>
+
+#include <DMAAcc.hpp>
 
 // We need to convert from float to fixed, and vice-versa,
 // if we are using float for the CPU data, and fixed for
@@ -53,8 +56,14 @@ public:
     FIRAcc FIRInst;
     FFTAcc IFFTInst;
 
+    // Instance of DMA accelerator to offload data movements
+    DMAAcc DMAInst;
+
+    // Instance of Monolithic FFI accelerator.
+    FFIAcc FFIInst;
+
     // Buffer pointers.
-    device_t*mem;
+    device_t *mem;
     unsigned **ptable;
     volatile device_t* sm_sync;
 
@@ -68,6 +77,7 @@ public:
     unsigned mem_size;
     unsigned acc_len;
     unsigned acc_size;
+    unsigned dma_offset;
      
     spandex_config_t SpandexConfig;
     unsigned CoherenceMode;
@@ -79,6 +89,8 @@ public:
 	unsigned FltVldFlag;
 	unsigned ProdRdyFlag;
 	unsigned ProdVldFlag;
+	unsigned DMARdyFlag;
+	unsigned DMAVldFlag;
 
     // Data size parameters. These are set from the rotator's
     // parameters in the configure phase.
@@ -96,6 +108,9 @@ public:
     void ConfigureAcc();
     void StartAcc();
 
+    void MonolithicConfigureAcc();
+    void MonolithicStartAcc();
+
     // Chain offload using regular accelerator invocation.
     // Here, pBFSrcDst is the shared BFormat passed between
     // tasks in the application.
@@ -103,11 +118,13 @@ public:
     // for THIS CHANNEL ONLY.
     // m_pfScratchBufferA is the output buffer.
     // CurChannel is the current channel between operated on.
-    void RegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
+    void PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
+    void BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
     // Chain offload using shared memory accelerator invocation.
     // Parameter definitions same as above.
-    void NonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters, audio_t* m_pfScratchBufferA, unsigned CurChannel, bool IsInit);
+    void PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
+    void BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
     // Copy twiddles factors (with format conversion) from
     // super_twiddles to FIR's twiddle buffer.
@@ -136,12 +153,21 @@ public:
     // In case of pipelined operation, this function
     // replaces ReadOutput. It performs ReadOutput,
     // as well as the overlap operation.
-    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast);
+    void BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst);
 
     // Handle pipelined operation of binauralizer filter.
     void BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
     void PrintTimeInfo(unsigned factor, bool isPsycho = true);
+
+    // Configure class parameters of the DMA.
+    void ConfigureDMA();
+
+    // Handle pipelined operation of psycho-acoustic filter, with DMA.
+    void PsychoProcessDMA(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap);
+
+    // Handle pipelined operation of binauralizer filter, with DMA.
+    void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 };
 
 #endif // FFICHAIN_H
