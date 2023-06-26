@@ -35,11 +35,10 @@ int main(int argc, char const *argv[])
     audio.loadSource();
     audio.num_blocks_left = numBlocks;
 
-    printf("[MAIN] Starting Processing\n");
     for (int i = 0; i < numBlocks; ++i) {
         // std::cout << "{" << std::endl;
         audio.processBlock();
-        printf("[MAIN] Audio block %d done\n", i);
+        printf("Block %d done\n", i);
         // std::cout << "}," << std::endl;
     }
 
@@ -50,17 +49,13 @@ int main(int argc, char const *argv[])
 }
 
 void PrintHeader() {
-    printf("---------------------------------------------\n");
-    printf("3D AUDIO DECODER\n");
-    printf("---------------------------------------------\n");
-    printf("COH PROTOCOL = %s\n", CohPrintHeader);
-    printf("CONFIG = %s\n", USE_MONOLITHIC_ACC ? "Monolithic Accelerator" :
-                            "Composable Accelerator");
-    printf("OFFLOADING = %s\n", (DO_FFT_OFFLOAD ? "FFT Invocation" :
-                                (DO_IFFT_OFFLOAD ? "IFFT Invocation" :
-                                (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
-                                (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
-                                (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :
-                                "No Offloading"))))));
-    printf("\n");
+    printf("--------------------------------------------------------------------------------------\n");
+    printf("3D SPATIAL AUDIO DECODER: ");
+//    printf("COHERENCE PROTOCOL = %s\n", CohPrintHeader);
+    printf("%s\n", (DO_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator for FFT-FIR-IFFT" :"Composed Fine-Grained Accelerators for FFT-FIR-IFFT") :
+                                (DO_NP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator with ASI" :"Composed Fine-Grained Accelerators with ASI") :
+                                (DO_PP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Hardware Pipelining" : "Software Pipelining" ):
+                                "All Software in EPOCHS"))));
+
+    printf("--------------------------------------------------------------------------------------\n");
 }

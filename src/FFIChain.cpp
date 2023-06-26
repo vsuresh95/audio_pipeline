@@ -49,13 +49,13 @@ void FFIChain::ConfigureAcc() {
 
 	// Reset all sync variables to default values.
 	for (unsigned ChainID = 0; ChainID < 4; ChainID++) {
-		sm_sync[ChainID*acc_len + VALID_FLAG_OFFSET] = 0;
-		sm_sync[ChainID*acc_len + READY_FLAG_OFFSET] = 1;
-		sm_sync[ChainID*acc_len + END_FLAG_OFFSET] = 0;
+		UpdateSync(ChainID*acc_len + VALID_FLAG_OFFSET, 0);
+		UpdateSync(ChainID*acc_len + READY_FLAG_OFFSET, 1);
+		UpdateSync(ChainID*acc_len + END_FLAG_OFFSET, 0);
 	}
 
-	sm_sync[acc_len + FLT_VALID_FLAG_OFFSET] = 0;
-	sm_sync[acc_len + FLT_READY_FLAG_OFFSET] = 1;
+	UpdateSync(acc_len + FLT_VALID_FLAG_OFFSET, 0);
+	UpdateSync(acc_len + FLT_READY_FLAG_OFFSET, 1);
 
     StartTime = 0;
     EndTime = 0;
@@ -193,8 +193,6 @@ void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filter
 	unsigned ChannelsLeft = m_nChannelCount;
 
 	while (ChannelsLeft != 0) {
-        // std::cout << "Psycho channel = " << m_nChannelCount - ChannelsLeft << std::endl;
-
 		StartCounter();
 		// Write input data for FFT.
 		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
@@ -229,9 +227,9 @@ void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Fi
 	while (ChannelsLeft != 0) {
 		StartCounter();
 		// Wait for FFT (consumer) to be ready.
-		while (sm_sync[ConsRdyFlag] != 1);
+		SpinSync(ConsRdyFlag, 1);
 		// Reset flag for next iteration.
-		sm_sync[ConsRdyFlag] = 0;
+		UpdateSync(ConsRdyFlag, 0);
 		// Write input data for FFT.
 		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
 		EndCounter(0);
@@ -240,29 +238,29 @@ void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Fi
 
 		StartCounter();
 		// Wait for FIR (consumer) to be ready.
-		while (sm_sync[FltRdyFlag] != 1);
+		SpinSync(FltRdyFlag, 1);
 		// Reset flag for next iteration.
-		sm_sync[FltRdyFlag] = 0;
+		UpdateSync(FltRdyFlag, 0);
 		// Write input data for FIR filters.
 		InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
 		// Inform FIR (consumer) of filters ready.
-		sm_sync[FltVldFlag] = 1;
+		UpdateSync(FltVldFlag, 1);
 		// Inform FFT (consumer) to start.
-		sm_sync[ConsVldFlag] = 1;
+		UpdateSync(ConsVldFlag, 1);
 		EndCounter(1);
 
 		StartCounter();
 		// Wait for IFFT (producer) to send output.
-		while (sm_sync[ProdVldFlag] != 1);
+		SpinSync(ProdVldFlag, 1);
 		// Reset flag for next iteration.
-		sm_sync[ProdVldFlag] = 0;
+		UpdateSync(ProdVldFlag, 0);
 		EndCounter(2);
 
 		// Read back output from IFFT
 		StartCounter();
 		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
 		// Inform IFFT (producer) - ready for next iteration.
-		sm_sync[ProdRdyFlag] = 1;
+		UpdateSync(ProdRdyFlag, 1);
 		EndCounter(3);	
 
 		ChannelsLeft--;
@@ -274,8 +272,6 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 		unsigned ChannelsLeft = m_nChannelCount;
 
 		while (ChannelsLeft != 0) {
-            // std::cout << "Binaur ear " << niEar << " channel = " << m_nChannelCount - ChannelsLeft << std::endl;
-
 			StartCounter();
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
@@ -311,38 +307,38 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 		while (ChannelsLeft != 0) {
 			StartCounter();
 			// Wait for FFT (consumer) to be ready.
-			while (sm_sync[ConsRdyFlag] != 1);
+			SpinSync(ConsRdyFlag, 1);
 			// Reset flag for next iteration.
-			sm_sync[ConsRdyFlag] = 0;
+			UpdateSync(ConsRdyFlag, 0);
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
 			EndCounter(4);
 
 			StartCounter();
 			// Wait for FIR (consumer) to be ready.
-			while (sm_sync[FltRdyFlag] != 1);
+			SpinSync(FltRdyFlag, 1);
 			// Reset flag for next iteration.
-			sm_sync[FltRdyFlag] = 0;
+			UpdateSync(FltRdyFlag, 0);
 			// Write input data for FIR filters.
 			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
 			// Inform FIR (consumer) of filters ready.
-			sm_sync[FltVldFlag] = 1;
+			UpdateSync(FltVldFlag, 1);
 			// Inform FFT (consumer) to start.
-			sm_sync[ConsVldFlag] = 1;
+			UpdateSync(ConsVldFlag, 1);
 			EndCounter(5);			
 
 			StartCounter();
 			// Wait for IFFT (producer) to send output.
-			while (sm_sync[ProdVldFlag] != 1);
+			SpinSync(ProdVldFlag, 1);
 			// Reset flag for next iteration.
-			sm_sync[ProdVldFlag] = 0;
+			UpdateSync(ProdVldFlag, 0);
 			EndCounter(6);
 
 			// Read back output from IFFT
 			StartCounter();
 			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
 			// Inform IFFT (producer) - ready for next iteration.
-			sm_sync[ProdRdyFlag] = 1;
+			UpdateSync(ProdRdyFlag, 1);
 			EndCounter(7);	
 
 			ChannelsLeft--;
@@ -363,48 +359,45 @@ void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audi
 	while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
 		if (InputChannelsLeft) {
 			// Wait for FFT (consumer) to be ready
-			if (sm_sync[ConsRdyFlag] == 1) {
-				sm_sync[ConsRdyFlag] = 0;
+			if (TestSync(ConsRdyFlag, 1)) {
+				UpdateSync(ConsRdyFlag, 0);
 				// Write input data for FFT
         		StartCounter();
 				InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, true);
-    			asm volatile ("fence w, w");
         		EndCounter(0);
 				// Inform FFT (consumer)
-				sm_sync[ConsVldFlag] = 1;
+				UpdateSync(ConsVldFlag, 1);
 				InputChannelsLeft--;
 			}
 		}
 
 		if (FilterChannelsLeft) {
 			// Wait for FIR (consumer) to be ready
-			if (sm_sync[FltRdyFlag] == 1) {
-				sm_sync[FltRdyFlag] = 0;
+			if (TestSync(FltRdyFlag, 1)) {
+				UpdateSync(FltRdyFlag, 0);
 
             	unsigned iChannelOrder = int(sqrt(m_nChannelCount - FilterChannelsLeft));
 
 				// Write input data for filters
         		StartCounter();
 				InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
-    			asm volatile ("fence w, w");
         		EndCounter(1);
 				// Inform FIR (consumer)
-				sm_sync[FltVldFlag] = 1;
+				UpdateSync(FltVldFlag, 1);
 				FilterChannelsLeft--;
 			}
 		}
 
 		if (OutputChannelsLeft) {
 			// Wait for IFFT (producer) to send output
-			if (sm_sync[ProdVldFlag] == 1) {
-				sm_sync[ProdVldFlag] = 0;
+			if (TestSync(ProdVldFlag, 1)) {
+				UpdateSync(ProdVldFlag, 0);
 				// Read back output
         		StartCounter();
 				PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - OutputChannelsLeft);
-    			asm volatile ("fence w, w");
         		EndCounter(2);
 				// Inform IFFT (producer)
-				sm_sync[ProdRdyFlag] = 1;
+				UpdateSync(ProdRdyFlag, 1);
 				OutputChannelsLeft--;
 			}
 		}
@@ -426,45 +419,42 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 		while (InputChannelsLeft != 0 || FilterChannelsLeft != 0 || OutputChannelsLeft != 0) {
 			if (InputChannelsLeft) {
 				// Wait for FFT (consumer) to be ready
-				if (sm_sync[ConsRdyFlag] == 1) {
-					sm_sync[ConsRdyFlag] = 0;
+				if (TestSync(ConsRdyFlag, 1)) {
+					UpdateSync(ConsRdyFlag, 0);
 					// Write input data for FFT
         			StartCounter();
 					InitData(pBFSrcDst, m_nChannelCount - InputChannelsLeft, false);
-    				asm volatile ("fence w, w");
         			EndCounter(3);
 					// Inform FFT (consumer)
-					sm_sync[ConsVldFlag] = 1;
+					UpdateSync(ConsVldFlag, 1);
 					InputChannelsLeft--;
 				}
 			}
 
 			if (FilterChannelsLeft) {
 				// Wait for FIR (consumer) to be ready
-				if (sm_sync[FltRdyFlag] == 1) {
-					sm_sync[FltRdyFlag] = 0;
+				if (TestSync(FltRdyFlag, 1)) {
+					UpdateSync(FltRdyFlag, 0);
 					// Write input data for filters
         			StartCounter();
 					InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - FilterChannelsLeft]);
-    				asm volatile ("fence w, w");
         			EndCounter(4);
 					// Inform FIR (consumer)
-					sm_sync[FltVldFlag] = 1;
+					UpdateSync(FltVldFlag, 1);
 					FilterChannelsLeft--;
 				}
 			}
 
 			if (OutputChannelsLeft) {
 				// Wait for IFFT (producer) to send output
-				if (sm_sync[ProdVldFlag] == 1) {
-					sm_sync[ProdVldFlag] = 0;
+				if (TestSync(ProdVldFlag, 1)) {
+					UpdateSync(ProdVldFlag, 0);
 					// Read back output
         			StartCounter();
 					BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (OutputChannelsLeft == 1), (OutputChannelsLeft == m_nChannelCount));
-    				asm volatile ("fence w, w");
         			EndCounter(5);
 					// Inform IFFT (producer)
-					sm_sync[ProdRdyFlag] = 1;
+					UpdateSync(ProdRdyFlag, 1);
 					OutputChannelsLeft--;
 				}
 			}

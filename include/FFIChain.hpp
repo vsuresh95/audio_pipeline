@@ -197,6 +197,10 @@ public:
 
     void FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
     void IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
+
+    void UpdateSync(unsigned FlagOFfset, int64_t value);
+    void SpinSync(unsigned FlagOFfset, int64_t value);
+    bool TestSync(unsigned FlagOFfset, int64_t value);
 };
 
 #endif // FFICHAIN_H

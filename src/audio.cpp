@@ -325,20 +325,27 @@ void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
 }
 
 void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
-    printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM AUDIO\n");
-    printf("---------------------------------------------\n");
-    printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
-    printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
-    printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
+    uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
+    
+    printf("\n--------------------------------------------------------------------------------------\n");
+    std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
 
-    // Call lower-level print functions.
-    rotator.PrintTimeInfo(factor);
-    decoder.PrintTimeInfo(factor);
+    printf("--------------------------------------------------------------------------------------\n");
+    
+    // printf("---------------------------------------------\n");
+    // printf("TOTAL TIME FROM AUDIO\n");
+    // printf("---------------------------------------------\n");
+    // printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
+    // printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
+    // printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
 
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor);
-    }
+    // // Call lower-level print functions.
+    // rotator.PrintTimeInfo(factor);
+    // decoder.PrintTimeInfo(factor);
+
+    // if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    //     FFIChainInst.PrintTimeInfo(factor);
+    // }
 }
 
 void OffloadPsychoChain(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {
