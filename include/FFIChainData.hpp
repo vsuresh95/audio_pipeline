@@ -1,25 +1,6 @@
 #ifndef FFI_CHAIN_DATA
 #define FFI_CHAIN_DATA
 
-float scaling_factors[16] = {
-    1,
-    -7.94948e-05,
-    1,
-    0.000792296,
-    -1.0909e-07,
-    -0.000137689,
-    0.999999,
-    0.0013723,
-    5.3816e-07,
-    -1.17955e-10,
-    -2.43934e-07,
-    -0.000194722,
-    0.999998,
-    0.00194072,
-    1.20336e-06,
-    3.81315e-10,
-};
-
 void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) {
 	unsigned InitLength = m_nBlockSize;
 	audio_token_t SrcData;
@@ -40,16 +21,8 @@ void FFIChain::InitData(CBFormat* pBFSrcDst, unsigned InitChannel, bool IsInit) 
 		// Need to cast to void* for extended ASM code.
 		SrcData.value_64 = read_mem_reqv((void *) src);
 
-		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(fabs(10*1/scaling_factors[InitChannel]) * SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(fabs(10*1/scaling_factors[InitChannel]) * SrcData.value_32_2, AUDIO_FX_IL);
-
-		// // printf("[%.6g ", SrcData.value_32_1);
-		// // printf("%x ", DstData.value_32_1);
-		// printf("%.9g, ", FIXED_TO_FLOAT_WRAP(DstData.value_32_1, AUDIO_FX_IL));
-		// // printf("[%.6g ", SrcData.value_32_2);
-		// // printf("%x ", DstData.value_32_2);
-		// printf("%.9g, ", FIXED_TO_FLOAT_WRAP(DstData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
+		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -78,14 +51,6 @@ void FFIChain::InitFilters(CBFormat* pBFSrcDst, kiss_fft_cpx* m_Filters) {
 
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-		// printf("[%.6g ", SrcData.value_32_1);
-		// printf("%x ", DstData.value_32_1);
-		// printf("%.6g] ", FIXED_TO_FLOAT_WRAP(DstData.value_32_1, AUDIO_FX_IL));
-		// printf("[%.6g ", SrcData.value_32_2);
-		// printf("%x ", DstData.value_32_2);
-		// printf("%.6g] ", FIXED_TO_FLOAT_WRAP(DstData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
 
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -141,14 +106,6 @@ void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
 		DstData.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
 		DstData.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
-		// printf("[%.6g ", SrcData.value_32_1);
-		// printf("%x ", DstData.value_32_1);
-		// printf("%.6g] ", FIXED_TO_FLOAT_WRAP(DstData.value_32_1, AUDIO_FX_IL));
-		// printf("[%.6g ", SrcData.value_32_2);
-		// printf("%x ", DstData.value_32_2);
-		// printf("%.6g] ", FIXED_TO_FLOAT_WRAP(DstData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
-
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst, DstData.value_64);
 	}
@@ -182,12 +139,8 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		SrcData.value_64 = read_mem_reqodata((void *) src);
 		OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 
-		DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-		
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
+		DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+		DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -199,12 +152,8 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		// Need to cast to void* for extended ASM code.
 		SrcData.value_64 = read_mem_reqodata((void *) src);
 
-		DstData.value_32_1 = m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		DstData.value_32_2 = m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-		
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
+		DstData.value_32_1 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+		DstData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -219,12 +168,8 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 		// Need to cast to void* for extended ASM code.
 		SrcData.value_64 = read_mem_reqodata((void *) src);
 
-		OverlapData.value_32_1 = m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-		OverlapData.value_32_2 = m_fFFTScaler * fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-		
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-		// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-		// if (niSample % 4 == 0) std::cout << std::endl;
+		OverlapData.value_32_1 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+		OverlapData.value_32_2 = m_fFFTScaler * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
@@ -269,12 +214,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 			DstData.value_64 = read_mem_reqv((void *) dst);
 
-			DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * (DstData.value_32_2 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-			// if (niSample % 4 == 0) std::cout << std::endl;
+			DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
+			DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -288,12 +229,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			SrcData.value_64 = read_mem_reqodata((void *) src);
 			DstData.value_64 = read_mem_reqv((void *) dst);
 
-			DstData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			DstData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-			// if (niSample % 4 == 0) std::cout << std::endl;
+			DstData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
+			DstData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -310,12 +247,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			SrcData.value_64 = read_mem_reqodata((void *) src);
 			DstData.value_64 = read_mem_reqv((void *) dst);
 
-			OverlapData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-			// if (niSample % 4 == 0) std::cout << std::endl;
+			OverlapData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
+			OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
@@ -331,12 +264,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			// Need to cast to void* for extended ASM code.
 			SrcData.value_64 = read_mem_reqodata((void *) src);
 
-			DstData.value_32_1 = fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-			DstData.value_32_2 = fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-			// if (niSample % 4 == 0) std::cout << std::endl;
+			DstData.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+			DstData.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) dst, DstData.value_64);
@@ -353,12 +282,8 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 			SrcData.value_64 = read_mem_reqodata((void *) src);
 			DstData.value_64 = read_mem_reqv((void *) dst);
 
-			DstData.value_32_1 = DstData.value_32_1 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
-			DstData.value_32_2 = DstData.value_32_2 + fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
-
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL));
-			// printf("%.9g, ", fabs(0.1*scaling_factors[CurChannel]) * FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL));
-			// if (niSample % 4 == 0) std::cout << std::endl;
+			DstData.value_32_1 = DstData.value_32_1 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_1, AUDIO_FX_IL);
+			DstData.value_32_2 = DstData.value_32_2 + FIXED_TO_FLOAT_WRAP(SrcData.value_32_2, AUDIO_FX_IL);
 
 			// Need to cast to void* for extended ASM code.
 			write_mem_wtfwd((void *) dst, DstData.value_64);

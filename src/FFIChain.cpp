@@ -93,24 +93,10 @@ void FFIChain::FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* fre
 	}
 	EndCounter(0);
 
-	// std::cout << "FFT Input" << std::endl;
-	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-	// 	printf("%.9g ", mem[(0 * acc_len) + SYNC_VAR_SIZE + niSample]);
-	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-	// }
-	// std::cout << std::endl;
-
 	// Start and check for termination of each accelerator.
 	StartCounter();
 	esp_run(fft_cfg_000, 1);
 	EndCounter(1);
-
-	// std::cout << "FFT Output" << std::endl;
-	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-	// 	printf("%.9g ", mem[(1 * acc_len) + SYNC_VAR_SIZE + niSample]);
-	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-	// }
-	// std::cout << std::endl;
 
 	unsigned ReadLength = m_nFFTSize;
 
@@ -170,24 +156,10 @@ void FFIChain::IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* fr
 	}
 	EndCounter(0);
 
-	// std::cout << "IFFT Input" << std::endl;
-	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-	// 	printf("%.9g ", mem[(2 * acc_len) + SYNC_VAR_SIZE + niSample]);
-	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-	// }
-	// std::cout << std::endl;
-
 	// Start and check for termination of each accelerator.
 	StartCounter();
 	esp_run(ifft_cfg_000, 1);
 	EndCounter(1);
-
-	// std::cout << "IFFT Output" << std::endl;
-	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(3 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-	// }
-	// std::cout << std::endl;
 
 	unsigned ReadLength = m_nFFTSize;
 	device_token_t SrcData_o;
@@ -237,33 +209,9 @@ void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filter
 
 		// Start and check for termination of each accelerator.
 		StartCounter();
-		// std::cout << "FFT Input" << std::endl;
-		// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        // 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(0 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-		// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-		// }
-		// std::cout << std::endl;
 		esp_run(fft_cfg_000, 1);
-		// std::cout << "FFT Output" << std::endl;
-		// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        // 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(1 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-		// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-		// }
-		// std::cout << std::endl;
 		esp_run(fir_cfg_000, 1);
-		// std::cout << "FIR Output" << std::endl;
-		// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        // 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(2 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-		// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-		// }
-		// std::cout << std::endl;
 		esp_run(ifft_cfg_000, 1);
-		// std::cout << "IFFT Output" << std::endl;
-		// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        // 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(3 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-		// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-		// }
-		// std::cout << std::endl;
 		EndCounter(2);
 
 		// Read back output from IFFT
@@ -340,33 +288,9 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 
 			// Start and check for termination of each accelerator.
 			StartCounter();
-			// std::cout << "FFT Input" << std::endl;
-			// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(0 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-			// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-			// }
-			// std::cout << std::endl;
 			esp_run(fft_cfg_000, 1);
-			// std::cout << "FFT Output" << std::endl;
-			// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(1 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-			// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-			// }
-			// std::cout << std::endl;
 			esp_run(fir_cfg_000, 1);
-			// std::cout << "FIR Output" << std::endl;
-			// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(2 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-			// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-			// }
-			// std::cout << std::endl;
 			esp_run(ifft_cfg_000, 1);
-			// std::cout << "IFFT Output" << std::endl;
-			// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
-        	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(3 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
-			// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
-			// }
-			// std::cout << std::endl;
 			EndCounter(6);
 
 			// Read back output from IFFT
