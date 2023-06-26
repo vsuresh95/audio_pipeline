@@ -64,6 +64,159 @@ void FFIChain::ConfigureAcc() {
     	TotalTime[i] = 0;
 }
 
+void FFIChain::FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {
+	// Write input data for FFT.
+	unsigned InitLength = m_nFFTSize;
+	audio_token_t SrcData_i;
+	audio_t* src_i;
+	device_token_t DstData_i;
+	device_t* dst_i;
+
+	// See init_params() for memory layout.
+	src_i = timedata;
+	dst_i = mem + SYNC_VAR_SIZE;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
+	{
+		// Need to cast to void* for extended ASM code.
+		SrcData_i.value_64 = read_mem_reqv((void *) src_i);
+
+		DstData_i.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
+		DstData_i.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
+
+		// Need to cast to void* for extended ASM code.
+		write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
+	}
+	EndCounter(0);
+
+	// std::cout << "FFT Input" << std::endl;
+	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
+	// 	printf("%.9g ", mem[(0 * acc_len) + SYNC_VAR_SIZE + niSample]);
+	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
+	// }
+	// std::cout << std::endl;
+
+	// Start and check for termination of each accelerator.
+	StartCounter();
+	esp_run(fft_cfg_000, 1);
+	EndCounter(1);
+
+	// std::cout << "FFT Output" << std::endl;
+	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
+	// 	printf("%.9g ", mem[(1 * acc_len) + SYNC_VAR_SIZE + niSample]);
+	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
+	// }
+	// std::cout << std::endl;
+
+	unsigned ReadLength = m_nFFTSize;
+
+	device_token_t SrcData_o;
+	device_t* src_o;
+	audio_token_t DstData_o;
+	audio_t* dst_o;
+
+	// See init_params() for memory layout.
+	src_o = mem + (1 * acc_len) + SYNC_VAR_SIZE;
+	dst_o = freqdata;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src_o+=2, dst_o+=2)
+	{
+		// Need to cast to void* for extended ASM code.
+		SrcData_o.value_64 = read_mem_reqodata((void *) src_o);
+
+		DstData_o.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
+		DstData_o.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
+
+		// Need to cast to void* for extended ASM code.
+		write_mem((void *) dst_o, DstData_o.value_64);
+	}
+	EndCounter(2);
+}
+
+void FFIChain::IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {
+	// Write input data for FFT.
+	unsigned InitLength = m_nFFTSize;
+	audio_token_t SrcData_i;
+	audio_t* src_i;
+	device_token_t DstData_i;
+	device_t* dst_i;
+
+	// See init_params() for memory layout.
+	src_i = freqdata;
+	dst_i = mem + (2 * acc_len) + SYNC_VAR_SIZE;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
+	{
+		// Need to cast to void* for extended ASM code.
+		SrcData_i.value_64 = read_mem_reqv((void *) src_i);
+
+		DstData_i.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
+		DstData_i.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
+
+		// Need to cast to void* for extended ASM code.
+		write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
+	}
+	EndCounter(0);
+
+	// std::cout << "IFFT Input" << std::endl;
+	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
+	// 	printf("%.9g ", mem[(2 * acc_len) + SYNC_VAR_SIZE + niSample]);
+	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
+	// }
+	// std::cout << std::endl;
+
+	// Start and check for termination of each accelerator.
+	StartCounter();
+	esp_run(ifft_cfg_000, 1);
+	EndCounter(1);
+
+	// std::cout << "IFFT Output" << std::endl;
+	// for(unsigned niSample = 0; niSample < m_nFFTSize; niSample++) {
+	// 	printf("%.9g ", FIXED_TO_FLOAT_WRAP(mem[(3 * acc_len) + SYNC_VAR_SIZE + niSample], AUDIO_FX_IL));
+	// 	if ((niSample + 1) % 8 == 0) std::cout << std::endl;
+	// }
+	// std::cout << std::endl;
+
+	unsigned ReadLength = m_nFFTSize;
+	device_token_t SrcData_o;
+	device_t* src_o;
+	audio_token_t DstData_o;
+	audio_t* dst_o;
+
+	// See init_params() for memory layout.
+	src_o = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
+	dst_o = timedata;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src_o+=2, dst_o+=2)
+	{
+		// Need to cast to void* for extended ASM code.
+		SrcData_o.value_64 = read_mem_reqodata((void *) src_o);
+
+		DstData_o.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
+		DstData_o.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
+
+		// Need to cast to void* for extended ASM code.
+		write_mem((void *) dst_o, DstData_o.value_64);
+	}
+	EndCounter(2);
+}
+
 void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
 

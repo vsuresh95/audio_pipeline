@@ -71,7 +71,7 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     // Hardware acceleration
     // 1. Regular invocation chain
     // 2. Shared memory invocation chain - non-pipelined or pipelined
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_OFFLOAD || DO_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
         FFIChainInst.ConfigureAcc();
@@ -394,3 +394,19 @@ void OffloadBinaurPipeline(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_p
     else
         FFIChainInstHandle->BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void OffloadFFT(kiss_fft_scalar* timedata, kiss_fft_cpx* freqdata) {
+    FFIChainInstHandle->FFTRegularProcess(timedata, (kiss_fft_scalar*) freqdata);
+}
+
+void OffloadIFFT(kiss_fft_scalar* timedata, kiss_fft_cpx* freqdata) {
+    FFIChainInstHandle->IFFTRegularProcess(timedata, (kiss_fft_scalar*) freqdata);
+}
+
+#ifdef __cplusplus
+}
+#endif

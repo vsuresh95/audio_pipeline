@@ -56,9 +56,11 @@ void PrintHeader() {
     printf("COH PROTOCOL = %s\n", CohPrintHeader);
     printf("CONFIG = %s\n", USE_MONOLITHIC_ACC ? "Monolithic Accelerator" :
                             "Composable Accelerator");
-    printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
+    printf("OFFLOADING = %s\n", (DO_FFT_OFFLOAD ? "FFT Invocation" :
+                                (DO_IFFT_OFFLOAD ? "IFFT Invocation" :
+                                (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
                                 (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
                                 (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :
-                                "No Offloading"))));
+                                "No Offloading"))))));
     printf("\n");
 }

@@ -26,6 +26,8 @@ typedef int device_t;
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
 #endif
 
+#define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)
+
 // Control partition layout
 // 0 - [From Producer] Valid Flag
 // 1 - Padding
@@ -192,6 +194,9 @@ public:
     
     // Store binauralizer filters from audio DMA scratchpad to FIR filter buffer on demand.
     void StoreBinaurFilters(unsigned InitEar, unsigned InitChannel);
+
+    void FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
+    void IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
 };
 
 #endif // FFICHAIN_H

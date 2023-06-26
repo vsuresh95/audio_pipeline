@@ -156,7 +156,7 @@ void FFIChain::InitTwiddles(CBFormat* pBFSrcDst, kiss_fft_cpx* super_twiddles) {
 
 void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigned CurChannel) {
 	unsigned ReadLength = m_nBlockSize;
-	unsigned OverlapLength = m_nOverlapLength;
+	unsigned OverlapLength = round_up(m_nOverlapLength, 2);
 	device_token_t SrcData;
 	device_t* src;
 	audio_token_t DstData;
@@ -234,7 +234,7 @@ void FFIChain::PsychoOverlap(CBFormat* pBFSrcDst, audio_t** m_pfOverlap, unsigne
 
 void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pfOverlap, bool isLast, bool isFirst, unsigned CurChannel) {
 	unsigned ReadLength =  m_nBlockSize;
-	unsigned OverlapLength = m_nOverlapLength;
+	unsigned OverlapLength = round_up(m_nOverlapLength, 2);
 	device_token_t SrcData;
 	device_t* src;
 	audio_token_t DstData;
