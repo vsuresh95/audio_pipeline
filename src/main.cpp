@@ -24,13 +24,12 @@ int main(int argc, char **argv) {
     // and initialize any data.
     audio.Configure();
 
-    printf("[MAIN] Starting Processing\n");
     audio.loadSource();
 
     // Process all audio blocks one by one.
     for (int i = 0; i < numBlocks; i++) {
         audio.processBlock();
-        printf("[MAIN] %d done\n", i);
+        printf("Block %d done\n", i);
     }
 
     // Print out profile results.

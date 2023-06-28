@@ -168,6 +168,10 @@ public:
 
     // Handle pipelined operation of binauralizer filter, with DMA.
     void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
+
+    void UpdateSync(unsigned FlagOFfset, int64_t value);
+    void SpinSync(unsigned FlagOFfset, int64_t value);
+    bool TestSync(unsigned FlagOFfset, int64_t value);
 };
 
 #endif // FFICHAIN_H
