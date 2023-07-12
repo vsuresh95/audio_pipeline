@@ -48,6 +48,8 @@ void FFIChain::ConfigureAcc() {
 	FFTInst.inverse = 0;
 	IFFTInst.inverse = 1;
 
+	InitSyncFlags();
+	
 	// After assigning the parameters, we call ConfigureAcc() for
 	// each accelerator object to program accelerator register
 	// with these parameters.

@@ -48,6 +48,33 @@ void FFIChain::InitParams() {
 	DMAVldFlag = 8*acc_len + VALID_FLAG_OFFSET;
 }
 
+void FFIChain::InitSyncFlags() {
+	FFTInst.prod_valid_offset = VALID_FLAG_OFFSET;
+	FFTInst.prod_ready_offset = READY_FLAG_OFFSET;
+	FFTInst.cons_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	FFTInst.cons_ready_offset = acc_len + READY_FLAG_OFFSET;
+	FFTInst.load_data_offset = SYNC_VAR_SIZE;
+	FFTInst.store_data_offset = acc_len + SYNC_VAR_SIZE;
+
+	FIRInst.prod_valid_offset = VALID_FLAG_OFFSET;
+	FIRInst.prod_ready_offset = READY_FLAG_OFFSET;
+	FIRInst.flt_prod_valid_offset = FLT_VALID_FLAG_OFFSET;
+	FIRInst.flt_prod_ready_offset = FLT_READY_FLAG_OFFSET;
+	FIRInst.cons_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	FIRInst.cons_ready_offset = acc_len + READY_FLAG_OFFSET;
+	FIRInst.load_data_offset = SYNC_VAR_SIZE;
+	FIRInst.flt_load_data_offset = 4 * acc_len;
+	FIRInst.twd_load_data_offset = 6 * acc_len;
+	FIRInst.store_data_offset = acc_len + SYNC_VAR_SIZE;
+
+	IFFTInst.prod_valid_offset = VALID_FLAG_OFFSET;
+	IFFTInst.prod_ready_offset = READY_FLAG_OFFSET;
+	IFFTInst.cons_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	IFFTInst.cons_ready_offset = acc_len + READY_FLAG_OFFSET;
+	IFFTInst.load_data_offset = SYNC_VAR_SIZE;
+	IFFTInst.store_data_offset = acc_len + SYNC_VAR_SIZE;
+}
+
 void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {
 	if (UseESP) {
 		SpandexConfig.spandex_reg = 0;

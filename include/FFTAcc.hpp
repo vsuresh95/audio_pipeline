@@ -7,6 +7,13 @@
 #define AUDIO_FFT_LOGN_SAMPLES_REG 0x44
 #define AUDIO_FFT_DO_SHIFT_REG 0x40
 
+#define AUDIO_FFT_PROD_VALID_OFFSET 0x4C
+#define AUDIO_FFT_PROD_READY_OFFSET 0x50
+#define AUDIO_FFT_CONS_VALID_OFFSET 0x54
+#define AUDIO_FFT_CONS_READY_OFFSET 0x58
+#define AUDIO_FFT_LOAD_DATA_OFFSET 0x5C
+#define AUDIO_FFT_STORE_DATA_OFFSET 0x60
+
 #define SLD_AUDIO_FFT 0x055
 #define FFT_DEV_NAME "sld,audio_fft_stratus"
 
@@ -28,6 +35,14 @@ public:
 
     unsigned SpandexReg;
     unsigned CoherenceMode;
+
+	// ASI sync flag offsets
+    unsigned prod_valid_offset;
+    unsigned prod_ready_offset;
+    unsigned cons_valid_offset;
+    unsigned cons_ready_offset;
+    unsigned load_data_offset;
+    unsigned store_data_offset;
 
     void ProbeAcc(int DeviceNum);
 

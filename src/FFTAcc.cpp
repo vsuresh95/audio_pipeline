@@ -39,6 +39,13 @@ void FFTAcc::ConfigureAcc() {
 	/* <<--regs-config-->> */
 	iowrite32(FFTDev, AUDIO_FFT_LOGN_SAMPLES_REG, logn_samples);
 	iowrite32(FFTDev, AUDIO_FFT_DO_INVERSE_REG, inverse);
+
+	iowrite32(FFTDev, AUDIO_FFT_PROD_VALID_OFFSET, prod_valid_offset);
+	iowrite32(FFTDev, AUDIO_FFT_PROD_READY_OFFSET, prod_ready_offset);
+	iowrite32(FFTDev, AUDIO_FFT_CONS_VALID_OFFSET, cons_valid_offset);
+	iowrite32(FFTDev, AUDIO_FFT_CONS_READY_OFFSET, cons_ready_offset);
+	iowrite32(FFTDev, AUDIO_FFT_LOAD_DATA_OFFSET, load_data_offset);
+	iowrite32(FFTDev, AUDIO_FFT_STORE_DATA_OFFSET, store_data_offset);
 }
 
 void FFTAcc::StartAcc() {

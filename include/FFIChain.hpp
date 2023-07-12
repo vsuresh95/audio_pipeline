@@ -108,6 +108,9 @@ public:
     void ConfigureAcc();
     void StartAcc();
 
+    // Set the default sync flags offsets for all accelerators
+    void InitSyncFlags();
+    
     void MonolithicConfigureAcc();
     void MonolithicStartAcc();
 
@@ -169,6 +172,7 @@ public:
     // Handle pipelined operation of binauralizer filter, with DMA.
     void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
 
+    // Generic APIs for interfacing with ASI sync flags
     void UpdateSync(unsigned FlagOFfset, int64_t value);
     void SpinSync(unsigned FlagOFfset, int64_t value);
     bool TestSync(unsigned FlagOFfset, int64_t value);
