@@ -32,8 +32,8 @@ void FFTAcc::ConfigureAcc() {
 	iowrite32(FFTDev, PT_SHIFT_REG, CHUNK_SHIFT);
 
 	// Use the following if input and output data are not allocated at the default offsets
-	iowrite32(FFTDev, SRC_OFFSET_REG, 2 * inverse * acc_size);
-	iowrite32(FFTDev, DST_OFFSET_REG, 2 * inverse * acc_size);
+	iowrite32(FFTDev, SRC_OFFSET_REG, 0);
+	iowrite32(FFTDev, DST_OFFSET_REG, 0);
 
 	// Pass accelerator-specific configuration parameters
 	/* <<--regs-config-->> */
@@ -44,8 +44,8 @@ void FFTAcc::ConfigureAcc() {
 	iowrite32(FFTDev, AUDIO_FFT_PROD_READY_OFFSET, prod_ready_offset);
 	iowrite32(FFTDev, AUDIO_FFT_CONS_VALID_OFFSET, cons_valid_offset);
 	iowrite32(FFTDev, AUDIO_FFT_CONS_READY_OFFSET, cons_ready_offset);
-	iowrite32(FFTDev, AUDIO_FFT_LOAD_DATA_OFFSET, load_data_offset);
-	iowrite32(FFTDev, AUDIO_FFT_STORE_DATA_OFFSET, store_data_offset);
+	iowrite32(FFTDev, AUDIO_FFT_INPUT_OFFSET, input_offset);
+	iowrite32(FFTDev, AUDIO_FFT_OUTPUT_OFFSET, output_offset);
 }
 
 void FFTAcc::StartAcc() {

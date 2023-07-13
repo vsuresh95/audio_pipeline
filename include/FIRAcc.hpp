@@ -13,10 +13,10 @@
 #define AUDIO_FIR_FLT_PROD_READY_OFFSET 0x58
 #define AUDIO_FIR_CONS_VALID_OFFSET 0x5C
 #define AUDIO_FIR_CONS_READY_OFFSET 0x60
-#define AUDIO_FIR_LOAD_DATA_OFFSET 0x64
-#define AUDIO_FIR_FLT_LOAD_DATA_OFFSET 0x68
-#define AUDIO_FIR_TWD_LOAD_DATA_OFFSET 0x6C
-#define AUDIO_FIR_STORE_DATA_OFFSET 0x70
+#define AUDIO_FIR_INPUT_OFFSET 0x64
+#define AUDIO_FIR_FLT_INPUT_OFFSET 0x68
+#define AUDIO_FIR_TWD_INPUT_OFFSET 0x6C
+#define AUDIO_FIR_OUTPUT_OFFSET 0x70
 
 #define SLD_AUDIO_FIR 0x056
 #define FIR_DEV_NAME "sld,audio_fir_stratus"
@@ -46,10 +46,10 @@ public:
     unsigned flt_prod_ready_offset;
     unsigned cons_valid_offset;
     unsigned cons_ready_offset;
-    unsigned load_data_offset;
-    unsigned flt_load_data_offset;
-    unsigned twd_load_data_offset;
-    unsigned store_data_offset;
+    unsigned input_offset;
+    unsigned flt_input_offset;
+    unsigned twd_input_offset;
+    unsigned output_offset;
 
     void ProbeAcc(int DeviceNum);
 

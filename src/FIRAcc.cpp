@@ -32,8 +32,8 @@ void FIRAcc::ConfigureAcc() {
 	iowrite32(FIRDev, PT_SHIFT_REG, CHUNK_SHIFT);
 
 	// Use the following if input and output data are not allocated at the default offsets
-	iowrite32(FIRDev, SRC_OFFSET_REG, acc_size);
-	iowrite32(FIRDev, DST_OFFSET_REG, acc_size);
+	iowrite32(FIRDev, SRC_OFFSET_REG, 0);
+	iowrite32(FIRDev, DST_OFFSET_REG, 0);
 
 	// Pass accelerator-specific configuration parameters
 	/* <<--regs-config-->> */
@@ -45,10 +45,10 @@ void FIRAcc::ConfigureAcc() {
 	iowrite32(FIRDev, AUDIO_FIR_FLT_PROD_READY_OFFSET, flt_prod_ready_offset);
 	iowrite32(FIRDev, AUDIO_FIR_CONS_VALID_OFFSET, cons_valid_offset);
 	iowrite32(FIRDev, AUDIO_FIR_CONS_READY_OFFSET, cons_ready_offset);
-	iowrite32(FIRDev, AUDIO_FIR_LOAD_DATA_OFFSET, load_data_offset);
-	iowrite32(FIRDev, AUDIO_FIR_FLT_LOAD_DATA_OFFSET, flt_load_data_offset);
-	iowrite32(FIRDev, AUDIO_FIR_TWD_LOAD_DATA_OFFSET, twd_load_data_offset);
-	iowrite32(FIRDev, AUDIO_FIR_STORE_DATA_OFFSET, store_data_offset);
+	iowrite32(FIRDev, AUDIO_FIR_INPUT_OFFSET, input_offset);
+	iowrite32(FIRDev, AUDIO_FIR_FLT_INPUT_OFFSET, flt_input_offset);
+	iowrite32(FIRDev, AUDIO_FIR_TWD_INPUT_OFFSET, twd_input_offset);
+	iowrite32(FIRDev, AUDIO_FIR_OUTPUT_OFFSET, output_offset);
 }
 
 void FIRAcc::StartAcc() {

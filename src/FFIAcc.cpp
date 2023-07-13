@@ -38,6 +38,17 @@ void FFIAcc::ConfigureAcc() {
 	// Pass accelerator-specific configuration parameters
 	/* <<--regs-config-->> */
 	iowrite32(FFIDev, AUDIO_FFI_LOGN_SAMPLES_REG, logn_samples);
+
+	iowrite32(FFIDev, AUDIO_FFI_PROD_VALID_OFFSET, prod_valid_offset);
+	iowrite32(FFIDev, AUDIO_FFI_PROD_READY_OFFSET, prod_ready_offset);
+	iowrite32(FFIDev, AUDIO_FFI_FLT_PROD_VALID_OFFSET, flt_prod_valid_offset);
+	iowrite32(FFIDev, AUDIO_FFI_FLT_PROD_READY_OFFSET, flt_prod_ready_offset);
+	iowrite32(FFIDev, AUDIO_FFI_CONS_VALID_OFFSET, cons_valid_offset);
+	iowrite32(FFIDev, AUDIO_FFI_CONS_READY_OFFSET, cons_ready_offset);
+	iowrite32(FFIDev, AUDIO_FFI_INPUT_OFFSET, input_offset);
+	iowrite32(FFIDev, AUDIO_FFI_FLT_INPUT_OFFSET, flt_input_offset);
+	iowrite32(FFIDev, AUDIO_FFI_TWD_INPUT_OFFSET, twd_input_offset);
+	iowrite32(FFIDev, AUDIO_FFI_OUTPUT_OFFSET, output_offset);
 }
 
 void FFIAcc::StartAcc() {

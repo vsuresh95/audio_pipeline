@@ -76,6 +76,33 @@ void FFIChain::StartAcc() {
 	IFFTInst.StartAcc();
 }
 
+void FFIChain::InitSyncFlags() {
+	FFTInst.prod_valid_offset = VALID_FLAG_OFFSET;
+	FFTInst.prod_ready_offset = READY_FLAG_OFFSET;
+	FFTInst.cons_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	FFTInst.cons_ready_offset = acc_len + READY_FLAG_OFFSET;
+	FFTInst.input_offset = SYNC_VAR_SIZE;
+	FFTInst.output_offset = acc_len + SYNC_VAR_SIZE;
+
+	FIRInst.prod_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	FIRInst.prod_ready_offset = acc_len + READY_FLAG_OFFSET;
+	FIRInst.flt_prod_valid_offset = acc_len + FLT_VALID_FLAG_OFFSET;
+	FIRInst.flt_prod_ready_offset = acc_len + FLT_READY_FLAG_OFFSET;
+	FIRInst.cons_valid_offset = (2 * acc_len) + VALID_FLAG_OFFSET;
+	FIRInst.cons_ready_offset = (2 * acc_len) + READY_FLAG_OFFSET;
+	FIRInst.input_offset = acc_len + SYNC_VAR_SIZE;
+	FIRInst.flt_input_offset = 5 * acc_len;
+	FIRInst.twd_input_offset = 7 * acc_len;
+	FIRInst.output_offset = (2 * acc_len) + SYNC_VAR_SIZE;
+
+	IFFTInst.prod_valid_offset = (2 * acc_len) + VALID_FLAG_OFFSET;
+	IFFTInst.prod_ready_offset = (2 * acc_len) + READY_FLAG_OFFSET;
+	IFFTInst.cons_valid_offset = (3 * acc_len) + VALID_FLAG_OFFSET;
+	IFFTInst.cons_ready_offset = (3 * acc_len) + READY_FLAG_OFFSET;
+	IFFTInst.input_offset = (2 * acc_len) + SYNC_VAR_SIZE;
+	IFFTInst.output_offset = (3 * acc_len) + SYNC_VAR_SIZE;
+}
+
 void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
 
@@ -116,6 +143,48 @@ void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filter
 		ChannelsLeft--;
 	}
 }
+
+void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned ChannelsLeft = m_nChannelCount;
+
+		while (ChannelsLeft != 0) {
+			WriteScratchReg(0x100);
+			StartCounter();
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+			EndCounter(4);
+			WriteScratchReg(0);
+
+			WriteScratchReg(0x200);
+			StartCounter();
+			// Write input data for FIR filters.
+			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
+			EndCounter(5);
+			WriteScratchReg(0);
+
+			// Start and check for termination of each accelerator.
+			StartCounter();
+			FFTInst.StartAcc();
+			FFTInst.TerminateAcc();
+			FIRInst.StartAcc();
+			FIRInst.TerminateAcc();
+			IFFTInst.StartAcc();
+			IFFTInst.TerminateAcc();
+			EndCounter(6);
+
+			WriteScratchReg(0x400);
+			StartCounter();
+			// Read back output from IFFT
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			EndCounter(7);	
+			WriteScratchReg(0);
+
+			ChannelsLeft--;
+		}
+	}
+}
+#endif
 
 void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
@@ -166,47 +235,6 @@ void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Fi
 		WriteScratchReg(0);
 
 		ChannelsLeft--;
-	}
-}
-
-void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
-    for(unsigned niEar = 0; niEar < 2; niEar++) {
-		unsigned ChannelsLeft = m_nChannelCount;
-
-		while (ChannelsLeft != 0) {
-			WriteScratchReg(0x100);
-			StartCounter();
-			// Write input data for FFT.
-			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(4);
-			WriteScratchReg(0);
-
-			WriteScratchReg(0x200);
-			StartCounter();
-			// Write input data for FIR filters.
-			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
-			EndCounter(5);
-			WriteScratchReg(0);
-
-			// Start and check for termination of each accelerator.
-			StartCounter();
-			FFTInst.StartAcc();
-			FFTInst.TerminateAcc();
-			FIRInst.StartAcc();
-			FIRInst.TerminateAcc();
-			IFFTInst.StartAcc();
-			IFFTInst.TerminateAcc();
-			EndCounter(6);
-
-			WriteScratchReg(0x400);
-			StartCounter();
-			// Read back output from IFFT
-			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
-			EndCounter(7);	
-			WriteScratchReg(0);
-
-			ChannelsLeft--;
-		}
 	}
 }
 
@@ -261,7 +289,6 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 		}
 	}
 }
-#endif
 
 void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned InputChannelsLeft = m_nChannelCount;

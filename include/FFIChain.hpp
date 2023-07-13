@@ -24,7 +24,7 @@
 #define FIXED_TO_FLOAT_WRAP(x, y) x
 #else
 #include <fixed_point.h>
-#define AUDIO_FX_IL 4
+#define AUDIO_FX_IL 14
 #define FLOAT_TO_FIXED_WRAP(x, y) float_to_fixed32(x, y)
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
 #endif
