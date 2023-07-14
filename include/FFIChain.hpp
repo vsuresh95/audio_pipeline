@@ -124,6 +124,9 @@ public:
     void StartDMA();
     void EndDMA();
 
+    // Set the default sync flags offsets for all accelerators
+    void InitSyncFlags();
+
     // Chain offload using regular accelerator invocation.
     // Here, pBFSrcDst is the shared BFormat passed between
     // tasks in the application.
@@ -198,6 +201,7 @@ public:
     void FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
     void IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
 
+    // Generic APIs for interfacing with ASI sync flags
     void UpdateSync(unsigned FlagOFfset, int64_t value);
     void SpinSync(unsigned FlagOFfset, int64_t value);
     bool TestSync(unsigned FlagOFfset, int64_t value);

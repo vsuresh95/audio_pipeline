@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include <FFIThreadInfo.hpp>
 #include <FFIChain.hpp>
+#include <FFIThreadInfo.hpp>
 #include <FFIChainHelper.hpp>
 #include <FFIChainData.hpp>
 #include <FFIChainDMA.hpp>
@@ -37,15 +37,11 @@ void FFIChain::ConfigureAcc() {
 	audio_fir_cfg_000[0].spandex_conf = SpandexConfig.spandex_reg;
 	audio_ifft_cfg_000[0].spandex_conf = SpandexConfig.spandex_reg;
 
-	audio_ifft_cfg_000[0].src_offset = 2 * acc_size;
-	audio_ifft_cfg_000[0].dst_offset = 2 * acc_size;
-
-	audio_fir_cfg_000[0].src_offset = acc_size;
-	audio_fir_cfg_000[0].dst_offset = acc_size;
-
     fft_cfg_000[0].hw_buf = mem;
     fir_cfg_000[0].hw_buf = mem;
     ifft_cfg_000[0].hw_buf = mem;
+
+	InitSyncFlags();
 
 	// Reset all sync variables to default values.
 	for (unsigned ChainID = 0; ChainID < 4; ChainID++) {
@@ -221,6 +217,40 @@ void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filter
 	}
 }
 
+void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned ChannelsLeft = m_nChannelCount;
+
+		while (ChannelsLeft != 0) {
+			StartCounter();
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+			EndCounter(4);
+
+			StartCounter();
+			// Write input data for FIR filters.
+			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
+			EndCounter(5);
+
+			// Start and check for termination of each accelerator.
+			StartCounter();
+			esp_run(fft_cfg_000, 1);
+			esp_run(fir_cfg_000, 1);
+			esp_run(ifft_cfg_000, 1);
+			EndCounter(6);
+
+			// Read back output from IFFT
+			StartCounter();
+			// BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount), m_nChannelCount - ChannelsLeft);
+			EndCounter(7);	
+
+			ChannelsLeft--;
+		}
+	}
+}
+#endif
+
 void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
 
@@ -264,39 +294,6 @@ void FFIChain::PsychoNonPipelineProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Fi
 		EndCounter(3);	
 
 		ChannelsLeft--;
-	}
-}
-
-void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap) {
-    for(unsigned niEar = 0; niEar < 2; niEar++) {
-		unsigned ChannelsLeft = m_nChannelCount;
-
-		while (ChannelsLeft != 0) {
-			StartCounter();
-			// Write input data for FFT.
-			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
-			EndCounter(4);
-
-			StartCounter();
-			// Write input data for FIR filters.
-			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
-			EndCounter(5);
-
-			// Start and check for termination of each accelerator.
-			StartCounter();
-			esp_run(fft_cfg_000, 1);
-			esp_run(fir_cfg_000, 1);
-			esp_run(ifft_cfg_000, 1);
-			EndCounter(6);
-
-			// Read back output from IFFT
-			StartCounter();
-			// BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
-			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount), m_nChannelCount - ChannelsLeft);
-			EndCounter(7);	
-
-			ChannelsLeft--;
-		}
 	}
 }
 
@@ -345,7 +342,6 @@ void FFIChain::BinaurNonPipelineProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, k
 		}
 	}
 }
-#endif
 
 void FFIChain::PsychoProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned InputChannelsLeft = m_nChannelCount;

@@ -42,6 +42,15 @@ struct audio_fft_stratus_access {
 	unsigned do_inverse;
 	unsigned logn_samples;
 	unsigned do_shift;
+
+	// ASI sync flag offsets
+    unsigned prod_valid_offset;
+    unsigned prod_ready_offset;
+    unsigned cons_valid_offset;
+    unsigned cons_ready_offset;
+    unsigned input_offset;
+    unsigned output_offset;
+
 	unsigned src_offset;
 	unsigned dst_offset;
 	unsigned spandex_conf;
@@ -53,6 +62,19 @@ struct audio_fir_stratus_access {
 	unsigned do_inverse;
 	unsigned logn_samples;
 	unsigned do_shift;
+
+	// ASI sync flag offsets
+    unsigned prod_valid_offset;
+    unsigned prod_ready_offset;
+    unsigned flt_prod_valid_offset;
+    unsigned flt_prod_ready_offset;
+    unsigned cons_valid_offset;
+    unsigned cons_ready_offset;
+    unsigned input_offset;
+    unsigned flt_input_offset;
+    unsigned twd_input_offset;
+    unsigned output_offset;
+
 	unsigned src_offset;
 	unsigned dst_offset;
 	unsigned spandex_conf;
@@ -73,6 +95,19 @@ struct audio_ffi_stratus_access {
 	unsigned do_inverse;
 	unsigned logn_samples;
 	unsigned do_shift;
+
+	// ASI sync flag offsets
+    unsigned prod_valid_offset;
+    unsigned prod_ready_offset;
+    unsigned flt_prod_valid_offset;
+    unsigned flt_prod_ready_offset;
+    unsigned cons_valid_offset;
+    unsigned cons_ready_offset;
+    unsigned input_offset;
+    unsigned flt_input_offset;
+    unsigned twd_input_offset;
+    unsigned output_offset;
+
 	unsigned src_offset;
 	unsigned dst_offset;
 	unsigned spandex_conf;
@@ -84,6 +119,14 @@ struct audio_fft_stratus_access audio_fft_cfg_000[] = {
 		.do_inverse = 0,
 		.logn_samples = LOGN_SAMPLES,
 		.do_shift = DO_SHIFT,
+
+		.prod_valid_offset = 0,
+		.prod_ready_offset = 0,
+		.cons_valid_offset = 0,
+		.cons_ready_offset = 0,
+		.input_offset = 0,
+		.output_offset = 0,
+		
 		.src_offset = 0,
 		.dst_offset = 0,
 	}
@@ -95,6 +138,14 @@ struct audio_fft_stratus_access audio_ifft_cfg_000[] = {
 		.do_inverse = 1,
 		.logn_samples = LOGN_SAMPLES,
 		.do_shift = DO_SHIFT,
+
+		.prod_valid_offset = 0,
+		.prod_ready_offset = 0,
+		.cons_valid_offset = 0,
+		.cons_ready_offset = 0,
+		.input_offset = 0,
+		.output_offset = 0,
+		
 		.src_offset = 0,
 		.dst_offset = 0,
 	}
@@ -106,6 +157,18 @@ struct audio_fir_stratus_access audio_fir_cfg_000[] = {
 		.do_inverse = 0,
 		.logn_samples = LOGN_SAMPLES,
 		.do_shift = DO_SHIFT,
+
+    	.prod_valid_offset = 0,
+    	.prod_ready_offset = 0,
+    	.flt_prod_valid_offset = 0,
+    	.flt_prod_ready_offset = 0,
+    	.cons_valid_offset = 0,
+    	.cons_ready_offset = 0,
+    	.input_offset = 0,
+    	.flt_input_offset = 0,
+    	.twd_input_offset = 0,
+    	.output_offset = 0,
+		
 		.src_offset = 0,
 		.dst_offset = 0,
 	}
@@ -126,6 +189,18 @@ struct audio_ffi_stratus_access audio_ffi_cfg_000[] = {
 		.do_inverse = 0,
 		.logn_samples = LOGN_SAMPLES,
 		.do_shift = DO_SHIFT,
+
+    	.prod_valid_offset = 0,
+    	.prod_ready_offset = 0,
+    	.flt_prod_valid_offset = 0,
+    	.flt_prod_ready_offset = 0,
+    	.cons_valid_offset = 0,
+    	.cons_ready_offset = 0,
+    	.input_offset = 0,
+    	.flt_input_offset = 0,
+    	.twd_input_offset = 0,
+    	.output_offset = 0,
+		
 		.src_offset = 0,
 		.dst_offset = 0,
 	}

@@ -49,6 +49,33 @@ void FFIChain::InitParams() {
 }
 
 #if (USE_MONOLITHIC_ACC == 0)
+void FFIChain::InitSyncFlags() {
+	audio_fft_cfg_000[0].prod_valid_offset = VALID_FLAG_OFFSET;
+	audio_fft_cfg_000[0].prod_ready_offset = READY_FLAG_OFFSET;
+	audio_fft_cfg_000[0].cons_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	audio_fft_cfg_000[0].cons_ready_offset = acc_len + READY_FLAG_OFFSET;
+	audio_fft_cfg_000[0].input_offset = SYNC_VAR_SIZE;
+	audio_fft_cfg_000[0].output_offset = acc_len + SYNC_VAR_SIZE;
+
+	audio_fir_cfg_000[0].prod_valid_offset = acc_len + VALID_FLAG_OFFSET;
+	audio_fir_cfg_000[0].prod_ready_offset = acc_len + READY_FLAG_OFFSET;
+	audio_fir_cfg_000[0].flt_prod_valid_offset = acc_len + FLT_VALID_FLAG_OFFSET;
+	audio_fir_cfg_000[0].flt_prod_ready_offset = acc_len + FLT_READY_FLAG_OFFSET;
+	audio_fir_cfg_000[0].cons_valid_offset = (2 * acc_len) + VALID_FLAG_OFFSET;
+	audio_fir_cfg_000[0].cons_ready_offset = (2 * acc_len) + READY_FLAG_OFFSET;
+	audio_fir_cfg_000[0].input_offset = acc_len + SYNC_VAR_SIZE;
+	audio_fir_cfg_000[0].flt_input_offset = 5 * acc_len;
+	audio_fir_cfg_000[0].twd_input_offset = 7 * acc_len;
+	audio_fir_cfg_000[0].output_offset = (2 * acc_len) + SYNC_VAR_SIZE;
+
+	audio_ifft_cfg_000[0].prod_valid_offset = (2 * acc_len) + VALID_FLAG_OFFSET;
+	audio_ifft_cfg_000[0].prod_ready_offset = (2 * acc_len) + READY_FLAG_OFFSET;
+	audio_ifft_cfg_000[0].cons_valid_offset = (3 * acc_len) + VALID_FLAG_OFFSET;
+	audio_ifft_cfg_000[0].cons_ready_offset = (3 * acc_len) + READY_FLAG_OFFSET;
+	audio_ifft_cfg_000[0].input_offset = (2 * acc_len) + SYNC_VAR_SIZE;
+	audio_ifft_cfg_000[0].output_offset = (3 * acc_len) + SYNC_VAR_SIZE;
+}
+
 void FFIChain::StartAcc() {
     // Invoke accelerators but do not check for end
     audio_fft_cfg_000[0].esp.start_stop = 1;
@@ -68,25 +95,25 @@ void FFIChain::EndAcc() {
 	}
 
 	// Wait for FFT (consumer) to be ready.
-	while (sm_sync[ConsRdyFlag] != 1);
+	SpinSync(ConsRdyFlag, 1);
 	// Reset flag for next iteration.
-	sm_sync[ConsRdyFlag] = 0;
+	UpdateSync(ConsRdyFlag, 0);
 	// Inform FFT (consumer) to start.
-	sm_sync[ConsVldFlag] = 1;
+	UpdateSync(ConsVldFlag, 1);
 
 	// Wait for FIR (consumer) to be ready.
-	while (sm_sync[FltRdyFlag] != 1);
+	SpinSync(FltRdyFlag, 1);
 	// Reset flag for next iteration.
-	sm_sync[FltRdyFlag] = 0;
+	UpdateSync(FltRdyFlag, 0);
 	// Inform FIR (consumer) to start.
-	sm_sync[FltVldFlag] = 1;
+	UpdateSync(FltVldFlag, 1);
 
 	// Wait for IFFT (producer) to send output.
-	while (sm_sync[ProdVldFlag] != 1);
+	SpinSync(ProdVldFlag, 1);
 	// Reset flag for next iteration.
-	sm_sync[ProdVldFlag] = 0;
+	UpdateSync(ProdVldFlag, 0);
 	// Inform IFFT (producer) - ready for next iteration.
-	sm_sync[ProdRdyFlag] = 1;
+	UpdateSync(ProdRdyFlag, 1);
 }
 
 void FFIChain::SetSpandexConfig(unsigned UseESP, unsigned CohPrtcl) {
