@@ -91,7 +91,7 @@ void FFIChain::StartAcc() {
 void FFIChain::EndAcc() {
 	// Set all END variables to 1.
 	for (unsigned ChainID = 0; ChainID < 3; ChainID++) {
-		sm_sync[ChainID*acc_len + END_FLAG_OFFSET] = 1;
+		UpdateSync(ChainID*acc_len + END_FLAG_OFFSET, 1);
 	}
 
 	// Wait for FFT (consumer) to be ready.
