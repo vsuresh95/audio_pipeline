@@ -22,6 +22,7 @@ typedef int device_t;
 #else
 #include <fixed_point.h>
 #define AUDIO_FX_IL 14
+#define ROTATE_FX_IL 16
 #define FLOAT_TO_FIXED_WRAP(x, y) float_to_fixed32(x, y)
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
 #endif
@@ -108,6 +109,8 @@ public:
     unsigned long long StartTime;
     unsigned long long EndTime;
     unsigned long long TotalTime[N_TIME_MARKERS];
+
+    rotate_params_t RotateParams;
 
     // Helper function to start timer, end timer and
     // capture the difference in TotalTime[Index].
@@ -205,6 +208,10 @@ public:
     void UpdateSync(unsigned FlagOFfset, int64_t value);
     void SpinSync(unsigned FlagOFfset, int64_t value);
     bool TestSync(unsigned FlagOFfset, int64_t value);
+
+    // Accelerate rotate order.
+    void OffloadRotateOrder(CBFormat* pBFSrcDst);
+    void UpdateRotateParams();
 };
 
 #endif // FFICHAIN_H

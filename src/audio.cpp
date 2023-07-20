@@ -74,7 +74,6 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_OFFLOAD || DO_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
-        FFIChainInst.ConfigureAcc();
 
         // Assign size parameters that is used for data store and load loops
         FFIChainInst.m_nChannelCount = rotator.m_nChannelCount;
@@ -82,6 +81,8 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
         FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
+        
+        FFIChainInst.ConfigureAcc();
 
     	// Write input data for psycho twiddle factors
     	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
@@ -121,12 +122,12 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
             .fDistance  = 1
         });
 
-        soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
-        soundSrcs.back().setSrcPos({
-            .fAzimuth   = 1.0f,
-            .fElevation = 0.0f,
-            .fDistance  = 5
-        });
+        // soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
+        // soundSrcs.back().setSrcPos({
+        //     .fAzimuth   = 1.0f,
+        //     .fElevation = 0.0f,
+        //     .fDistance  = 5
+        // });
     } else {
         for (unsigned int i = 0U; i < NUM_SRCS; i++) {
 
@@ -165,6 +166,16 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
         writeFile(resultSample);
+    } 
+    
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+        std::cout << "  {" << std::endl << "    ";
+        // std::cout << "resultSample[" << niEar << "]:" << std::endl;
+        for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
+            std::cout << resultSample[niEar][niSample] << ", ";
+            if ((niSample + 1) % 8 == 0) std::cout << std::endl << "    ";
+        }
+        std::cout << std::endl << "  }," << std::endl;
     }
 
     if (num_blocks_left > 0) {
@@ -218,6 +229,28 @@ void ILLIXR_AUDIO::ABAudio::updateRotation() {
     Orientation head(0,0,1.0*frame/1500*3.14*2);
     rotator.SetOrientation(head);
     rotator.Refresh();
+    if (DO_ROTATE_OFFLOAD) {
+        FFIChainInstHandle->RotateParams.m_fCosAlpha = rotator.m_fCosAlpha;
+        FFIChainInstHandle->RotateParams.m_fSinAlpha = rotator.m_fSinAlpha;
+        FFIChainInstHandle->RotateParams.m_fCosBeta = rotator.m_fCosBeta;
+        FFIChainInstHandle->RotateParams.m_fSinBeta = rotator.m_fSinBeta;
+        FFIChainInstHandle->RotateParams.m_fCosGamma = rotator.m_fCosGamma;
+        FFIChainInstHandle->RotateParams.m_fSinGamma = rotator.m_fSinGamma;
+        FFIChainInstHandle->RotateParams.m_fCos2Alpha = rotator.m_fCos2Alpha;
+        FFIChainInstHandle->RotateParams.m_fSin2Alpha = rotator.m_fSin2Alpha;
+        FFIChainInstHandle->RotateParams.m_fCos2Beta = rotator.m_fCos2Beta;
+        FFIChainInstHandle->RotateParams.m_fSin2Beta = rotator.m_fSin2Beta;
+        FFIChainInstHandle->RotateParams.m_fCos2Gamma = rotator.m_fCos2Gamma;
+        FFIChainInstHandle->RotateParams.m_fSin2Gamma = rotator.m_fSin2Gamma;
+        FFIChainInstHandle->RotateParams.m_fCos3Alpha = rotator.m_fCos3Alpha;
+        FFIChainInstHandle->RotateParams.m_fSin3Alpha = rotator.m_fSin3Alpha;
+        FFIChainInstHandle->RotateParams.m_fCos3Beta = rotator.m_fCos3Beta;
+        FFIChainInstHandle->RotateParams.m_fSin3Beta = rotator.m_fSin3Beta;
+        FFIChainInstHandle->RotateParams.m_fCos3Gamma = rotator.m_fCos3Gamma;
+        FFIChainInstHandle->RotateParams.m_fSin3Gamma = rotator.m_fSin3Gamma;
+
+        FFIChainInstHandle->UpdateRotateParams();
+    }
 }
 
 
@@ -325,27 +358,27 @@ void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
 }
 
 void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
-    uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
+    // uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
     
-    printf("\n--------------------------------------------------------------------------------------\n");
-    std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
+    // printf("\n--------------------------------------------------------------------------------------\n");
+    // std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
 
-    printf("--------------------------------------------------------------------------------------\n");
+    // printf("--------------------------------------------------------------------------------------\n");
     
-    // printf("---------------------------------------------\n");
-    // printf("TOTAL TIME FROM AUDIO\n");
-    // printf("---------------------------------------------\n");
-    // printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
-    // printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
-    // printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM AUDIO\n");
+    printf("---------------------------------------------\n");
+    printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
+    printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
+    printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
 
-    // // Call lower-level print functions.
-    // rotator.PrintTimeInfo(factor);
-    // decoder.PrintTimeInfo(factor);
+    // Call lower-level print functions.
+    rotator.PrintTimeInfo(factor);
+    decoder.PrintTimeInfo(factor);
 
-    // if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-    //     FFIChainInst.PrintTimeInfo(factor);
-    // }
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor);
+    }
 }
 
 void OffloadPsychoChain(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {
@@ -378,6 +411,10 @@ void OffloadBinaurPipeline(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_p
         FFIChainInstHandle->BinaurProcessDMA(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
     else
         FFIChainInstHandle->BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+}
+
+void OffloadRotateOrder(CBFormat* pBFSrcDst) {
+    FFIChainInstHandle->OffloadRotateOrder(pBFSrcDst);
 }
 
 #ifdef __cplusplus
