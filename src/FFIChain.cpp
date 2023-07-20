@@ -57,6 +57,19 @@ void FFIChain::ConfigureAcc() {
 	FIRInst.ConfigureAcc();
 	IFFTInst.ConfigureAcc();
 
+	if (DO_ROTATE_OFFLOAD) {
+		RotateInst.ProbeAcc(0);
+
+		RotateInst.ptable = ptable;
+		RotateInst.mem_size = mem_size;
+		RotateInst.acc_size = acc_size;
+		RotateInst.SpandexReg = SpandexConfig.spandex_reg;
+		RotateInst.CoherenceMode = CoherenceMode;
+		RotateInst.m_nChannelCount = m_nChannelCount;
+
+		RotateInst.ConfigureAcc();
+	}
+
 	// Reset all sync variables to default values.
 	for (unsigned ChainID = 0; ChainID < 4; ChainID++) {
 		UpdateSync(ChainID*acc_len + VALID_FLAG_OFFSET, 0);
@@ -415,6 +428,75 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 			}
 		}
 	}
+}
+
+void FFIChain::OffloadRotateOrder(CBFormat* pBFSrcDst) {
+	// Write input data for FFT.
+	unsigned InitLength = m_nBlockSize;
+	unsigned InitChannel = m_nChannelCount;
+	audio_token_t SrcData_i;
+	audio_t* src_i;
+	device_token_t DstData_i;
+	device_t* dst_i;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for(unsigned niChannel = 0; niChannel < InitChannel; niChannel++)
+	{
+		// See init_params() for memory layout.
+		src_i = pBFSrcDst->m_ppfChannels[niChannel];
+		dst_i = mem + 10 * acc_len;
+
+		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
+		{
+			// Need to cast to void* for extended ASM code.
+			SrcData_i.value_64 = read_mem_reqv((void *) src_i);
+
+			DstData_i.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_1, ROTATE_FX_IL);
+			DstData_i.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_2, ROTATE_FX_IL);
+
+			// Need to cast to void* for extended ASM code.
+			write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
+		}
+	}
+	EndCounter(0);
+
+	// Start and check for termination of each accelerator.
+	StartCounter();
+	RotateInst.StartAcc();
+	RotateInst.TerminateAcc();
+	EndCounter(1);
+
+	device_token_t SrcData_o;
+	device_t* src_o;
+	audio_token_t DstData_o;
+	audio_t* dst_o;
+
+	// We coalesce 4B elements to 8B accesses for 2 reasons:
+	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
+	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
+	StartCounter();
+	for(unsigned niChannel = 0; niChannel < InitChannel; niChannel++)
+	{
+		// See init_params() for memory layout.
+		src_o = mem + 10 * acc_len + m_nChannelCount * num_samples;
+		dst_o = pBFSrcDst->m_ppfChannels[niChannel];
+
+		for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_o+=2, dst_o+=2)
+		{
+			// Need to cast to void* for extended ASM code.
+			SrcData_o.value_64 = read_mem_reqodata((void *) src_o);
+
+			DstData_o.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_1, ROTATE_FX_IL);
+			DstData_o.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_2, ROTATE_FX_IL);
+
+			// Need to cast to void* for extended ASM code.
+			write_mem((void *) dst_o, DstData_o.value_64);
+		}
+	}
+	EndCounter(2);
 }
 
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {

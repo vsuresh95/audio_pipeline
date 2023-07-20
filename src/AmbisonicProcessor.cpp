@@ -126,49 +126,74 @@ void AmbisonicProcessor::updateRotation() {
     m_fCos3Gamma = myRand();
     m_fSin3Gamma = myRand();
 #endif
+
+	if (DO_ROTATE_OFFLOAD) {
+        FFIChainInst.RotateInst.m_fCosAlpha = FLOAT_TO_FIXED_WRAP(m_fCosAlpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSinAlpha = FLOAT_TO_FIXED_WRAP(m_fSinAlpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCosBeta = FLOAT_TO_FIXED_WRAP(m_fCosBeta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSinBeta = FLOAT_TO_FIXED_WRAP(m_fSinBeta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCosGamma = FLOAT_TO_FIXED_WRAP(m_fCosGamma, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSinGamma = FLOAT_TO_FIXED_WRAP(m_fSinGamma, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos2Alpha = FLOAT_TO_FIXED_WRAP(m_fCos2Alpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin2Alpha = FLOAT_TO_FIXED_WRAP(m_fSin2Alpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos2Beta = FLOAT_TO_FIXED_WRAP(m_fCos2Beta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin2Beta = FLOAT_TO_FIXED_WRAP(m_fSin2Beta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos2Gamma = FLOAT_TO_FIXED_WRAP(m_fCos2Gamma, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin2Gamma = FLOAT_TO_FIXED_WRAP(m_fSin2Gamma, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos3Alpha = FLOAT_TO_FIXED_WRAP(m_fCos3Alpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin3Alpha = FLOAT_TO_FIXED_WRAP(m_fSin3Alpha, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos3Beta = FLOAT_TO_FIXED_WRAP(m_fCos3Beta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin3Beta = FLOAT_TO_FIXED_WRAP(m_fSin3Beta, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fCos3Gamma = FLOAT_TO_FIXED_WRAP(m_fCos3Gamma, ROTATE_FX_IL);
+        FFIChainInst.RotateInst.m_fSin3Gamma = FLOAT_TO_FIXED_WRAP(m_fSin3Gamma, ROTATE_FX_IL);
+    }
 }
 
 void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
-    if (DO_PP_CHAIN_OFFLOAD) {
-        StartCounter();
-        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        if (USE_AUDIO_DMA) {
-            FFIChainInst.PsychoProcessDMA(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
-        } else {
-            FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
-        }
-        EndCounter(0);
-    } else if (DO_CHAIN_OFFLOAD) {
-        StartCounter();
-        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.PsychoRegularProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
-        EndCounter(0);
-    } else if (DO_NP_CHAIN_OFFLOAD) {
-        StartCounter();
-        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
-        FFIChainInst.PsychoNonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
-        EndCounter(0);
-    } else {
-        ShelfFilterOrder(pBFSrcDst, nSamples);
-    }
+    // if (DO_PP_CHAIN_OFFLOAD) {
+    //     StartCounter();
+    //     FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+    //     if (USE_AUDIO_DMA) {
+    //         FFIChainInst.PsychoProcessDMA(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+    //     } else {
+    //         FFIChainInst.PsychoProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+    //     }
+    //     EndCounter(0);
+    // } else if (DO_CHAIN_OFFLOAD) {
+    //     StartCounter();
+    //     FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+    //     FFIChainInst.PsychoRegularProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+    //     EndCounter(0);
+    // } else if (DO_NP_CHAIN_OFFLOAD) {
+    //     StartCounter();
+    //     FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+    //     FFIChainInst.PsychoNonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
+    //     EndCounter(0);
+    // } else {
+    //     ShelfFilterOrder(pBFSrcDst, nSamples);
+    // }
 
     StartCounter();
-	WriteScratchReg(0x10);
-    if(m_nOrder >= 1) {
-        // ProcessOrder1_3D(pBFSrcDst, nSamples);
-        ProcessOrder1_3D_Optimized(pBFSrcDst, nSamples);
+    if (DO_ROTATE_OFFLOAD) {        
+        FFIChainInst.OffloadRotateOrder(pBFSrcDst);
+    } else {
+        WriteScratchReg(0x10);
+        if(m_nOrder >= 1) {
+            // ProcessOrder1_3D(pBFSrcDst, nSamples);
+            ProcessOrder1_3D_Optimized(pBFSrcDst, nSamples);
+        }
+        WriteScratchReg(0);
+        WriteScratchReg(0x20);
+        if(m_nOrder >= 2) {
+            ProcessOrder2_3D_Optimized(pBFSrcDst, nSamples);
+        }
+        WriteScratchReg(0);
+        WriteScratchReg(0x40);
+        if(m_nOrder >= 3) {
+            ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
+        }
+        WriteScratchReg(0);
     }
-	WriteScratchReg(0);
-	WriteScratchReg(0x20);
-    if(m_nOrder >= 2) {
-        ProcessOrder2_3D_Optimized(pBFSrcDst, nSamples);
-    }
-	WriteScratchReg(0);
-	WriteScratchReg(0x40);
-    if(m_nOrder >= 3) {
-        ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
-    }
-	WriteScratchReg(0);
     EndCounter(3);
 }
 
