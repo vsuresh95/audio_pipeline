@@ -55,6 +55,7 @@ void PrintHeader() {
     printf("%s\n", (DO_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator for FFT-FIR-IFFT" :"Composed Fine-Grained Accelerators for FFT-FIR-IFFT") :
                                 (DO_NP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator with ASI" :"Composed Fine-Grained Accelerators with ASI") :
                                 (DO_PP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Hardware Pipelining" : "Software Pipelining" ):
+                                (DO_FFT_OFFLOAD || DO_IFFT_OFFLOAD) ? "Hardware Acceleration of FFT-IFFT in EPOCHS" :
                                 "All Software in EPOCHS"))));
 
     printf("--------------------------------------------------------------------------------------\n");
