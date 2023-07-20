@@ -121,12 +121,12 @@ void ILLIXR_AUDIO::ABAudio::loadSource(){
             .fDistance  = 1
         });
 
-        soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
-        soundSrcs.back().setSrcPos({
-            .fAzimuth   = 1.0f,
-            .fElevation = 0.0f,
-            .fDistance  = 5
-        });
+        // soundSrcs.emplace_back(samples_folder + "radioMusicSample.wav", NORDER, true);
+        // soundSrcs.back().setSrcPos({
+        //     .fAzimuth   = 1.0f,
+        //     .fElevation = 0.0f,
+        //     .fDistance  = 5
+        // });
     } else {
         for (unsigned int i = 0U; i < NUM_SRCS; i++) {
 
@@ -166,6 +166,16 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
         writeFile(resultSample);
     }
+
+    // for(unsigned niEar = 0; niEar < 2; niEar++) {
+    //     std::cout << "  {" << std::endl << "    ";
+    //     // std::cout << "resultSample[" << niEar << "]:" << std::endl;
+    //     for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
+    //         std::cout << resultSample[niEar][niSample] << ", ";
+    //         if ((niSample + 1) % 8 == 0) std::cout << std::endl << "    ";
+    //     }
+    //     std::cout << std::endl << "  }," << std::endl;
+    // }
 
     if (num_blocks_left > 0) {
         num_blocks_left--;
@@ -325,27 +335,27 @@ void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
 }
 
 void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
-    uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
+    // uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
     
-    printf("\n--------------------------------------------------------------------------------------\n");
-    std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
+    // printf("\n--------------------------------------------------------------------------------------\n");
+    // std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
 
-    printf("--------------------------------------------------------------------------------------\n");
+    // printf("--------------------------------------------------------------------------------------\n");
     
-    // printf("---------------------------------------------\n");
-    // printf("TOTAL TIME FROM AUDIO\n");
-    // printf("---------------------------------------------\n");
-    // printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
-    // printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
-    // printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
+    printf("---------------------------------------------\n");
+    printf("TOTAL TIME FROM AUDIO\n");
+    printf("---------------------------------------------\n");
+    printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
+    printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
+    printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
 
-    // // Call lower-level print functions.
-    // rotator.PrintTimeInfo(factor);
-    // decoder.PrintTimeInfo(factor);
+    // Call lower-level print functions.
+    rotator.PrintTimeInfo(factor);
+    decoder.PrintTimeInfo(factor);
 
-    // if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-    //     FFIChainInst.PrintTimeInfo(factor);
-    // }
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor);
+    }
 }
 
 void OffloadPsychoChain(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {

@@ -288,19 +288,13 @@ void FFIChain::BinaurOverlap(CBFormat* pBFSrcDst, audio_t* ppfDst, audio_t* m_pf
 
 void FFIChain::UpdateSync(unsigned FlagOFfset, int64_t UpdateValue) {
 	volatile device_t* sync = mem + FlagOFfset;
+	
+	asm volatile ("fence w, w");
 
-	// [FENCE BUG] for (unsigned i = 0; i < 100; i++) {
-	// 	asm volatile ("nop");
-	// }
-	// // Need to cast to void* for extended ASM code.
-	// write_mem_wtfwd((void *) sync, UpdateValue);
-	// for (unsigned i = 0; i < 100; i++) {
-	// 	asm volatile ("nop");
-	// }
-	// asm volatile ("fence w, w");
+	// Need to cast to void* for extended ASM code.
+	write_mem_wtfwd((void *) sync, UpdateValue);
 
 	asm volatile ("fence w, w");
-	*sync = UpdateValue;
 }
 
 void FFIChain::SpinSync(unsigned FlagOFfset, int64_t SpinValue) {
@@ -310,8 +304,7 @@ void FFIChain::SpinSync(unsigned FlagOFfset, int64_t SpinValue) {
 
 	while (ActualValue != ExpectedValue) {
 		// Need to cast to void* for extended ASM code.
-		// [FENCE BUG] ActualValue = read_mem_reqodata((void *) sync);
-		ActualValue = *sync;
+		ActualValue = read_mem_reqodata((void *) sync);
 	}
 }
 
@@ -321,8 +314,7 @@ bool FFIChain::TestSync(unsigned FlagOFfset, int64_t TestValue) {
 	int64_t ActualValue = 0xcafedead;
 
 	// Need to cast to void* for extended ASM code.
-	// [FENCE BUG] ActualValue = read_mem_reqodata((void *) sync);
-	ActualValue = *sync;
+	ActualValue = read_mem_reqodata((void *) sync);
 
 	if (ActualValue != ExpectedValue) return false;
 	else return true;

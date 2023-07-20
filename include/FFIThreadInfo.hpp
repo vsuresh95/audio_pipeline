@@ -24,16 +24,21 @@ extern "C" {
 #define AUDIO_FIR_STRATUS_IOC_ACCESS	_IOW ('S', 0, struct audio_fir_stratus_access)
 #define AUDIO_DMA_STRATUS_IOC_ACCESS	_IOW ('S', 0, struct audio_dma_stratus_access)
 #define AUDIO_FFI_STRATUS_IOC_ACCESS	_IOW ('S', 0, struct audio_ffi_stratus_access)
+#define EPOCHS_FFT_STRATUS_IOC_ACCESS  	_IOW ('S', 0, struct epochs_fft_stratus_access)
 
 char fft_dev_name[] = "audio_fft_stratus.0";
 char ifft_dev_name[] = "audio_fft_stratus.1";
 char fir_dev_name[] = "audio_fir_stratus.0";
 char dma_dev_name[] = "audio_dma_stratus.0";
 char ffi_dev_name[] = "audio_ffi_stratus.0";
+char epochs_fft_dev_name[] = "fft2_stratus.0";
+char epochs_ifft_dev_name[] = "fft2_stratus.1";
 
 /* <<--params-def-->> */
 #define LOGN_SAMPLES 10
 #define DO_SHIFT 0
+#define NUM_FFTS     1
+#define SCALE_FACTOR 1
 #define START_OFFSET 1
 
 struct audio_fft_stratus_access {
@@ -107,6 +112,20 @@ struct audio_ffi_stratus_access {
     unsigned flt_input_offset;
     unsigned twd_input_offset;
     unsigned output_offset;
+
+	unsigned src_offset;
+	unsigned dst_offset;
+	unsigned spandex_conf;
+};
+
+struct epochs_fft_stratus_access {
+	struct esp_access esp;
+	/* <<--regs-->> */
+	unsigned scale_factor;
+	unsigned do_inverse;
+	unsigned logn_samples;
+	unsigned do_shift;
+	unsigned num_ffts;
 
 	unsigned src_offset;
 	unsigned dst_offset;
@@ -206,6 +225,33 @@ struct audio_ffi_stratus_access audio_ffi_cfg_000[] = {
 	}
 };
 
+struct epochs_fft_stratus_access epochs_fft_cfg_000[] = {
+	{
+		/* <<--descriptor-->> */
+		.scale_factor = SCALE_FACTOR,   
+		.do_inverse = 0,
+		.logn_samples = LOGN_SAMPLES,
+		.do_shift = DO_SHIFT,
+		.num_ffts = NUM_FFTS,
+		.src_offset = 0,
+		.dst_offset = 0,
+	}
+};
+
+struct epochs_fft_stratus_access epochs_ifft_cfg_000[] = {
+	{
+		/* <<--descriptor-->> */
+		.scale_factor = SCALE_FACTOR,   
+		.do_inverse = 1,
+		.logn_samples = LOGN_SAMPLES,
+		.do_shift = DO_SHIFT,
+		.num_ffts = NUM_FFTS,
+		.src_offset = 0,
+		.dst_offset = 0,
+	}
+};
+
+#if (EPOCHS_TARGET == 0)
 esp_thread_info_t fft_cfg_000[] = {
 	{
 		.run = true,
@@ -223,6 +269,25 @@ esp_thread_info_t ifft_cfg_000[] = {
 		.esp_desc = &(audio_ifft_cfg_000[0].esp),
 	}
 };
+#else
+esp_thread_info_t fft_cfg_000[] = {
+       {
+               .run = true,
+               .devname = epochs_fft_dev_name,
+               .ioctl_req = EPOCHS_FFT_STRATUS_IOC_ACCESS,
+               .esp_desc = &(epochs_fft_cfg_000[0].esp),
+       }
+};
+
+esp_thread_info_t ifft_cfg_000[] = {
+       {
+               .run = true,
+               .devname = epochs_ifft_dev_name,
+               .ioctl_req = EPOCHS_FFT_STRATUS_IOC_ACCESS,
+               .esp_desc = &(epochs_ifft_cfg_000[0].esp),
+       }
+};
+#endif
 
 esp_thread_info_t fir_cfg_000[] = {
 	{

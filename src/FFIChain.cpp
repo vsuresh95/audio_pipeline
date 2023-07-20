@@ -40,6 +40,18 @@ void FFIChain::ConfigureAcc() {
     fft_cfg_000[0].hw_buf = mem;
     fir_cfg_000[0].hw_buf = mem;
     ifft_cfg_000[0].hw_buf = mem;
+	
+	epochs_fft_cfg_000[0].logn_samples = logn_samples;
+	epochs_ifft_cfg_000[0].logn_samples = logn_samples;
+
+	epochs_fft_cfg_000[0].esp.coherence = CoherenceMode;
+	epochs_ifft_cfg_000[0].esp.coherence = CoherenceMode;
+
+	epochs_fft_cfg_000[0].src_offset = ((0 * acc_len) + SYNC_VAR_SIZE) * sizeof(device_t);
+	epochs_fft_cfg_000[0].dst_offset = ((1 * acc_len) + SYNC_VAR_SIZE) * sizeof(device_t);
+
+	epochs_ifft_cfg_000[0].src_offset = ((2 * acc_len) + SYNC_VAR_SIZE) * sizeof(device_t);
+	epochs_ifft_cfg_000[0].dst_offset = ((3 * acc_len) + SYNC_VAR_SIZE) * sizeof(device_t);
 
 	InitSyncFlags();
 
