@@ -344,19 +344,25 @@ void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
     // printf("--------------------------------------------------------------------------------------\n");
     
     printf("---------------------------------------------\n");
-    printf("TOTAL TIME FROM AUDIO\n");
+    printf("TOP LEVEL TIME\n");
     printf("---------------------------------------------\n");
-    printf("Psycho Filter\t = %llu\n", TotalTime[0]/factor);
-    printf("Zoomer Process\t = %llu\n", TotalTime[1]/factor);
-    printf("Binaur Filter\t = %llu\n", TotalTime[2]/factor);
+    printf("Psycho Filter\t\t = %llu\n", TotalTime[0]/factor);
+    printf("Zoomer Process\t\t = %llu\n", TotalTime[1]/factor);
+    printf("Binaur Filter\t\t = %llu\n", TotalTime[2]/factor);
 
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);
+
+    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        FFIChainInst.PrintTimeInfo(factor, true);
+    }
+
     decoder.PrintTimeInfo(factor);
 
     if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor);
+        FFIChainInst.PrintTimeInfo(factor, false);
     }
+    printf("---------------------------------------------\n");
 }
 
 void OffloadPsychoFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
