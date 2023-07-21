@@ -9,6 +9,7 @@ typedef int device_t;
 
 #include <CohDefines.hpp>
 
+#include <_kiss_fft_guts.h>
 #include <kiss_fftr.h>
 #include <BFormat.h>
 
@@ -65,6 +66,9 @@ public:
     // Buffer pointers.
     device_t *mem;
     volatile device_t* sm_sync;
+
+    // Extra buffer for FIR in SW
+    kiss_fft_cpx* freqdata;
 
     // Accelerator parameters.
     unsigned logn_samples;
@@ -198,8 +202,10 @@ public:
     // Store binauralizer filters from audio DMA scratchpad to FIR filter buffer on demand.
     void StoreBinaurFilters(unsigned InitEar, unsigned InitChannel);
 
-    void FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
-    void IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata);
+    // Offload only FFT and IFFT to accelerators
+    void PsychoRegularFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg);
+    void BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg);
+    void FIR_SW(kiss_fftr_cfg FFTcfg, kiss_fft_cpx* m_Filters, kiss_fftr_cfg IFFTcfg);
 
     // Generic APIs for interfacing with ASI sync flags
     void UpdateSync(unsigned FlagOFfset, int64_t value);

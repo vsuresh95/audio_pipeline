@@ -16,6 +16,8 @@ void FFIChain::ConfigureAcc() {
 	mem = (device_t *) esp_alloc(mem_size);
     sm_sync = (volatile device_t*) mem;
 
+	freqdata = (kiss_fft_cpx*) esp_alloc(m_nFFTBins * sizeof(kiss_fft_cpx));
+
 	// Reset all sync variables to default values.
 	for (unsigned memElem = 0; memElem < (mem_size/sizeof(device_t)); memElem++) {
 		mem[memElem] = 0;
@@ -72,129 +74,169 @@ void FFIChain::ConfigureAcc() {
     	TotalTime[i] = 0;
 }
 
-void FFIChain::FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {
-	// Write input data for FFT.
+void FFIChain::FIR_SW(kiss_fftr_cfg FFTcfg, kiss_fft_cpx* m_Filters, kiss_fftr_cfg IFFTcfg) {
 	unsigned InitLength = m_nFFTSize;
-	audio_token_t SrcData_i;
-	audio_t* src_i;
-	device_token_t DstData_i;
-	device_t* dst_i;
+	device_token_t SrcData_i;
+	audio_token_t DstData_i;
+	audio_token_t SrcData_o;
+	device_token_t DstData_o;
+
+    kiss_fft_cpx fpnk,fpk,f1k,f2k,tw,tdc;
+    kiss_fft_cpx cpTemp;
 
 	// See init_params() for memory layout.
-	src_i = timedata;
-	dst_i = mem + SYNC_VAR_SIZE;
+	device_t* src_i = mem + (1 * acc_len) + SYNC_VAR_SIZE;
+	device_t* dst_o = mem + (2 * acc_len) + SYNC_VAR_SIZE;
 
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	StartCounter();
+	audio_t* dst_i = (audio_t*) src_i;
+	audio_t* src_o = (audio_t*) dst_o;
+
+	kiss_fft_cpx* dstIn = (kiss_fft_cpx*) dst_i;
+	kiss_fft_cpx* srcOut = (kiss_fft_cpx*) src_o;
+
+	// Converting FFT output to floating point in-place
 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
 	{
-		// Need to cast to void* for extended ASM code.
 		SrcData_i.value_64 = read_mem_reqv((void *) src_i);
 
-		DstData_i.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
-		DstData_i.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
+		DstData_i.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
+		DstData_i.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
 
-		// Need to cast to void* for extended ASM code.
 		write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
 	}
-	EndCounter(0);
 
-	// Start and check for termination of each accelerator.
-	StartCounter();
-	esp_run(fft_cfg_000, 1);
-	EndCounter(1);
+	// Post-processing
+	tdc.r = dstIn[0].r;
+    tdc.i = dstIn[0].i;
+    C_FIXDIV(tdc,2);
+    CHECK_OVERFLOW_OP(tdc.r ,+, tdc.i);
+    CHECK_OVERFLOW_OP(tdc.r ,-, tdc.i);
+    freqdata[0].r = tdc.r + tdc.i;
+    freqdata[m_nBlockSize].r = tdc.r - tdc.i;
+    freqdata[m_nBlockSize].i = freqdata[0].i = 0;
 
-	unsigned ReadLength = m_nFFTSize;
+    for (unsigned k = 1; k <= m_nBlockSize/2 ; ++k) {
+        fpk    = dstIn[k]; 
+        fpnk.r =   dstIn[m_nBlockSize-k].r;
+        fpnk.i = - dstIn[m_nBlockSize-k].i;
+        C_FIXDIV(fpk,2);
+        C_FIXDIV(fpnk,2);
 
-	device_token_t SrcData_o;
-	device_t* src_o;
-	audio_token_t DstData_o;
-	audio_t* dst_o;
+        C_ADD( f1k, fpk , fpnk );
+        C_SUB( f2k, fpk , fpnk );
+        C_MUL( tw , f2k , FFTcfg->super_twiddles[k-1]);
 
-	// See init_params() for memory layout.
-	src_o = mem + (1 * acc_len) + SYNC_VAR_SIZE;
-	dst_o = freqdata;
+        freqdata[k].r = HALF_OF(f1k.r + tw.r);
+        freqdata[k].i = HALF_OF(f1k.i + tw.i);
+        freqdata[m_nBlockSize-k].r = HALF_OF(f1k.r - tw.r);
+        freqdata[m_nBlockSize-k].i = HALF_OF(tw.i - f1k.i);
+    }
 
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	StartCounter();
-	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src_o+=2, dst_o+=2)
+	// FIR
+	for(unsigned k = 0; k < m_nFFTBins; k++){
+		C_MUL(cpTemp , freqdata[k] , m_Filters[k]);
+		freqdata[k] = cpTemp;
+	}
+
+	// Pre-processing
+	srcOut[0].r = freqdata[0].r + freqdata[m_nBlockSize].r;
+    srcOut[0].i = freqdata[0].r - freqdata[m_nBlockSize].r;
+    C_FIXDIV(srcOut[0],2);
+
+    for (unsigned k = 1; k <= m_nBlockSize / 2; ++k) {
+        kiss_fft_cpx fk, fnkc, fek, fok, tmp;
+        fk = freqdata[k];
+        fnkc.r = freqdata[m_nBlockSize - k].r;
+        fnkc.i = -freqdata[m_nBlockSize - k].i;
+        C_FIXDIV( fk , 2 );
+        C_FIXDIV( fnkc , 2 );
+
+        C_ADD (fek, fk, fnkc);
+        C_SUB (tmp, fk, fnkc);
+        C_MUL (fok, tmp, IFFTcfg->super_twiddles[k-1]);
+        C_ADD (srcOut[k],     fek, fok);
+        C_SUB (srcOut[m_nBlockSize - k], fek, fok);
+        srcOut[m_nBlockSize - k].i *= -1;
+    }	
+
+	// Converting IFFT input to floating point in-place
+	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_o+=2, dst_o+=2)
 	{
 		// Need to cast to void* for extended ASM code.
-		SrcData_o.value_64 = read_mem_reqodata((void *) src_o);
+		SrcData_o.value_64 = read_mem_reqv((void *) src_o);
 
-		DstData_o.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
-		DstData_o.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
+		DstData_o.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
+		DstData_o.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
 
 		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst_o, DstData_o.value_64);
+		write_mem_wtfwd((void *) dst_o, DstData_o.value_64);
 	}
-	EndCounter(2);
 }
 
-void FFIChain::IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {
-	// Write input data for FFT.
-	unsigned InitLength = m_nFFTSize;
-	audio_token_t SrcData_i;
-	audio_t* src_i;
-	device_token_t DstData_i;
-	device_t* dst_i;
+void FFIChain::PsychoRegularFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+	unsigned ChannelsLeft = m_nChannelCount;
 
-	// See init_params() for memory layout.
-	src_i = freqdata;
-	dst_i = mem + (2 * acc_len) + SYNC_VAR_SIZE;
+	while (ChannelsLeft != 0) {
+		StartCounter();
+		// Write input data for FFT.
+		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+		EndCounter(0);
 
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	StartCounter();
-	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData_i.value_64 = read_mem_reqv((void *) src_i);
+		unsigned iChannelOrder = int(sqrt(m_nChannelCount - ChannelsLeft));
 
-		DstData_i.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
-		DstData_i.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
+		StartCounter();
+		esp_run(fft_cfg_000, 1);
+		EndCounter(1);
 
-		// Need to cast to void* for extended ASM code.
-		write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
+		// The FIR computation is in software.
+		StartCounter();
+		FIR_SW(FFTcfg, m_Filters[iChannelOrder], IFFTcfg);
+		EndCounter(2);
+
+		StartCounter();
+		esp_run(ifft_cfg_000, 1);
+		EndCounter(3);
+
+		// Read back output from IFFT
+		StartCounter();
+		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
+		EndCounter(4);
+
+		ChannelsLeft--;
 	}
-	EndCounter(0);
+}
 
-	// Start and check for termination of each accelerator.
-	StartCounter();
-	esp_run(ifft_cfg_000, 1);
-	EndCounter(1);
+void FFIChain::BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+		unsigned ChannelsLeft = m_nChannelCount;
 
-	unsigned ReadLength = m_nFFTSize;
-	device_token_t SrcData_o;
-	device_t* src_o;
-	audio_token_t DstData_o;
-	audio_t* dst_o;
+		while (ChannelsLeft != 0) {
+			StartCounter();
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+			EndCounter(5);
 
-	// See init_params() for memory layout.
-	src_o = mem + (NUM_DEVICES * acc_len) + SYNC_VAR_SIZE;
-	dst_o = timedata;
+			StartCounter();
+			esp_run(fft_cfg_000, 1);
+			EndCounter(6);
+			
+			// The FIR computation is in software.
+			StartCounter();
+			FIR_SW(FFTcfg, m_Filters[niEar][m_nChannelCount - ChannelsLeft], IFFTcfg);
+			EndCounter(7);
 
-	// We coalesce 4B elements to 8B accesses for 2 reasons:
-	// 1. Special Spandex forwarding cases are compatible with 8B accesses only.
-	// 2. ESP NoC has a 8B interface, therefore, coalescing helps to optimize memory traffic.
-	StartCounter();
-	for (unsigned niSample = 0; niSample < ReadLength; niSample+=2, src_o+=2, dst_o+=2)
-	{
-		// Need to cast to void* for extended ASM code.
-		SrcData_o.value_64 = read_mem_reqodata((void *) src_o);
+			StartCounter();
+			esp_run(ifft_cfg_000, 1);
+			EndCounter(8);
 
-		DstData_o.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
-		DstData_o.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
+			// Read back output from IFFT
+			StartCounter();
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount), m_nChannelCount - ChannelsLeft);
+			EndCounter(9);
 
-		// Need to cast to void* for extended ASM code.
-		write_mem((void *) dst_o, DstData_o.value_64);
+			ChannelsLeft--;
+		}
 	}
-	EndCounter(2);
 }
 
 void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
@@ -495,23 +537,34 @@ void FFIChain::EndCounter(unsigned Index) {
 }
 
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
+    if (DO_FFT_IFFT_OFFLOAD) {
+		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+		printf("Psycho FFT\t = %llu\n", TotalTime[1]/factor);
+		printf("Psycho FIR\t = %llu\n", TotalTime[2]/factor);
+		printf("Psycho IFFT\t = %llu\n", TotalTime[3]/factor);
+		printf("Psycho Overlap\t = %llu\n", TotalTime[4]/factor);
+		printf("Binaur Init Data\t = %llu\n", TotalTime[5]/factor);
+		printf("Binaur FFT\t = %llu\n", TotalTime[6]/factor);
+		printf("Binaur FIR\t = %llu\n", TotalTime[7]/factor);
+		printf("Binaur IFFT\t = %llu\n", TotalTime[8]/factor);
+		printf("Binaur Overlap\t = %llu\n", TotalTime[9]/factor);
+	} else if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 		printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
 		printf("Psycho Acc execution\t = %llu\n", TotalTime[2]/factor);
-		printf("Psycho Output Read\t = %llu\n", TotalTime[3]/factor);
+		printf("Psycho Overlap\t = %llu\n", TotalTime[3]/factor);
 		printf("Binaur Init Data\t = %llu\n", TotalTime[4]/factor);
 		printf("Binaur Init Filters\t = %llu\n", TotalTime[5]/factor);
 		printf("Binaur Acc execution\t = %llu\n", TotalTime[6]/factor);
-		printf("Binaur Output Read\t = %llu\n", TotalTime[7]/factor);
+		printf("Binaur Overlap\t = %llu\n", TotalTime[7]/factor);
 	} else if (DO_PP_CHAIN_OFFLOAD) {
 		printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 		printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
 		printf("Psycho Acc execution\t = 0\n");
-		printf("Psycho Output Read\t = %llu\n", TotalTime[2]/factor);
+		printf("Psycho Overlap\t = %llu\n", TotalTime[2]/factor);
 		printf("Binaur Init Data\t = %llu\n", TotalTime[3]/factor);
 		printf("Binaur Init Filters\t = %llu\n", TotalTime[4]/factor);
 		printf("Binaur Acc execution\t = 0\n");
-		printf("Binaur Output Read\t = %llu\n", TotalTime[5]/factor);
+		printf("Binaur Overlap\t = %llu\n", TotalTime[5]/factor);
 	}
 }

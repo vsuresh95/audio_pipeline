@@ -74,7 +74,6 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
-        FFIChainInst.ConfigureAcc();
 
         // Assign size parameters that is used for data store and load loops
         FFIChainInst.m_nChannelCount = rotator.m_nChannelCount;
@@ -82,6 +81,8 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
         FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
+
+        FFIChainInst.ConfigureAcc();
 
     	// Write input data for psycho twiddle factors
     	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
@@ -353,9 +354,19 @@ void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
     rotator.PrintTimeInfo(factor);
     decoder.PrintTimeInfo(factor);
 
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
         FFIChainInst.PrintTimeInfo(factor);
     }
+}
+
+void OffloadPsychoFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+    FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
+    FFIChainInstHandle->PsychoRegularFFTIFFT(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap, FFTcfg, IFFTcfg);
+}
+
+void OffloadBinaurFFTIFFT(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_ppcpFilters, float** m_pfOverlap, unsigned m_nOverlapLength, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+    FFIChainInstHandle->m_nOverlapLength = m_nOverlapLength;
+    FFIChainInstHandle->BinaurRegularFFTIFFT(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap, FFTcfg, IFFTcfg);
 }
 
 void OffloadPsychoChain(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, bool IsSharedMemory) {
@@ -389,19 +400,3 @@ void OffloadBinaurPipeline(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_p
     else
         FFIChainInstHandle->BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void OffloadFFT(kiss_fft_scalar* timedata, kiss_fft_cpx* freqdata) {
-    FFIChainInstHandle->FFTRegularProcess(timedata, (kiss_fft_scalar*) freqdata);
-}
-
-void OffloadIFFT(kiss_fft_scalar* timedata, kiss_fft_cpx* freqdata) {
-    FFIChainInstHandle->IFFTRegularProcess(timedata, (kiss_fft_scalar*) freqdata);
-}
-
-#ifdef __cplusplus
-}
-#endif
