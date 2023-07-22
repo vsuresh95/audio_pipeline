@@ -31,6 +31,17 @@ void FFTAcc::ConfigureAcc() {
 	iowrite32(FFTDev, PT_NCHUNK_REG, NCHUNK(mem_size));
 	iowrite32(FFTDev, PT_SHIFT_REG, CHUNK_SHIFT);
 
+#if (EPOCHS_TARGET == 1)
+	// Use the following if input and output data are not allocated at the default offsets
+	iowrite32(FFTDev, SRC_OFFSET_REG, (((inverse * 2 + 0) * acc_size) + sync_size));
+	iowrite32(FFTDev, DST_OFFSET_REG, (((inverse * 2 + 1) * acc_size) + sync_size));
+
+	iowrite32(FFTDev, AUDIO_FFT_LOGN_SAMPLES_REG, logn_samples);
+	iowrite32(FFTDev, AUDIO_FFT_NUM_FFTS_REG, 1);
+	iowrite32(FFTDev, AUDIO_FFT_SCALE_FACTOR_REG, 1);
+	iowrite32(FFTDev, AUDIO_FFT_DO_SHIFT_REG, 0);
+	iowrite32(FFTDev, AUDIO_FFT_DO_INVERSE_REG, inverse);
+#else
 	// Use the following if input and output data are not allocated at the default offsets
 	iowrite32(FFTDev, SRC_OFFSET_REG, 0);
 	iowrite32(FFTDev, DST_OFFSET_REG, 0);
@@ -46,6 +57,7 @@ void FFTAcc::ConfigureAcc() {
 	iowrite32(FFTDev, AUDIO_FFT_CONS_READY_OFFSET, cons_ready_offset);
 	iowrite32(FFTDev, AUDIO_FFT_INPUT_OFFSET, input_offset);
 	iowrite32(FFTDev, AUDIO_FFT_OUTPUT_OFFSET, output_offset);
+#endif
 }
 
 void FFTAcc::StartAcc() {

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cstring>
 #include <AmbisonicBinauralizer.hpp>
+#include <ReadWriteCodeHelper.hpp>
 
 #if (USE_REAL_DATA == 1)
 #include <m_ppcpFilters.hpp>
@@ -117,59 +118,175 @@ void AmbisonicBinauralizer::Process(CBFormat *pBFSrc, audio_t **ppfDst) {
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;
         FFIChainInst.BinaurNonPipelineProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
         EndCounter(0);
+    } else if (DO_FFT_IFFT_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.BinaurRegularFFTIFFT(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap, m_pFFT_cfg, m_pIFFT_cfg);
+        EndCounter(0);
     } else {
+        kiss_fft_cpx cpTemp;
+
+        // Pointers/structures to manage input/output data
+        audio_token_t SrcData;
+        audio_t* src;
+        audio_token_t DstData;
+        audio_t* dst;
+        audio_token_t OverlapData;
+        audio_t* overlap_dst;
+
+        unsigned InitLength = m_nBlockSize;
+        unsigned ZeroLength = m_nFFTSize - m_nBlockSize;
+        unsigned ReadLength = m_nBlockSize;
+        unsigned OverlapLength = round_up(m_nOverlapLength, 2);
+
         for(niEar = 0; niEar < 2; niEar++)
         {
-            MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
             for(niChannel = 0; niChannel < m_nChannelCount; niChannel++)
             {
-                // Offload to regular invocation accelerators, or shared memory
-                // invocation accelerators, or SW as per compiler flags.
-                memcpy(m_pfScratchBufferB, pBFSrc->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-                MyMemset(&m_pfScratchBufferB[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+                src = pBFSrc->m_ppfChannels[niChannel];
+                dst = m_pfScratchBufferB;
 
                 StartCounter();
-                kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+                // Copying from pBFSrc->m_ppfChannels[niChannel] to m_pfScratchBufferB
+                for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
+                {
+                    // Need to cast to void* for extended ASM code.
+                    SrcData.value_64 = read_mem_reqv((void *) src);
+                    write_mem_wtfwd((void *) dst, SrcData.value_64);
+                }
+
+                // Zeroing rest of m_pfScratchBufferB
+                for (unsigned niSample = 0; niSample < ZeroLength; niSample+=2, dst+=2)
+                {
+                    // Need to cast to void* for extended ASM code.
+                    SrcData.value_64 = 0;
+                    write_mem_wtfwd((void *) dst, SrcData.value_64);
+                }
                 EndCounter(0);
+
+                StartCounter();
+                unsigned long long FFTPostProcTime = kiss_fftr(m_pFFT_cfg, m_pfScratchBufferB, m_pcpScratch);
+                EndCounter(1);
 
                 StartCounter();
                 for(ni = 0; ni < m_nFFTBins; ni++)
                 {
-                    cpTemp.r = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].r
-                                - m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].i;
-                    cpTemp.i = m_pcpScratch[ni].r * m_ppcpFilters[niEar][niChannel][ni].i
-                                + m_pcpScratch[ni].i * m_ppcpFilters[niEar][niChannel][ni].r;
+                    C_MUL(cpTemp , m_pcpScratch[ni] , m_ppcpFilters[niEar][niChannel][ni]);
                     m_pcpScratch[ni] = cpTemp;
                 }
-                EndCounter(1);
-
-                StartCounter();
-                kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
                 EndCounter(2);
 
-                for(ni = 0; ni < m_nFFTSize; ni++)
-                    m_pfScratchBufferA[ni] += m_pfScratchBufferB[ni];
+                StartCounter();
+                unsigned long long IFFTPreProcTime = kiss_fftri(m_pIFFT_cfg, m_pcpScratch, m_pfScratchBufferB);
+                EndCounter(3);
+
+                StartCounter();
+                if (niChannel == m_nChannelCount - 1)
+                {
+                    src = m_pfScratchBufferB;
+                    dst = ppfDst[niEar];
+                    overlap_dst = m_pfOverlap[niEar];
+
+                    // First, we copy the output, scale it, sum it to the earlier sum,
+                    // and account for the overlap data from the previous block, for the same channel.
+                    for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
+                    {
+                        // Need to cast to void* for extended ASM code.
+                        SrcData.value_64 = read_mem_reqodata((void *) src);
+                        OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
+                        DstData.value_64 = read_mem_reqv((void *) dst);
+
+                        DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * (DstData.value_32_1 + SrcData.value_32_1);
+                        DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * (DstData.value_32_2 + SrcData.value_32_2);
+
+                        // Need to cast to void* for extended ASM code.
+                        write_mem_wtfwd((void *) dst, DstData.value_64);
+                    }
+
+                    // Second, we simply copy the output (with scaling), sum it
+                    // with the previous outputs, as we are outside the overlap range.
+                    for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
+                    {
+                        // Need to cast to void* for extended ASM code.
+                        SrcData.value_64 = read_mem_reqodata((void *) src);
+                        DstData.value_64 = read_mem_reqv((void *) dst);
+
+                        DstData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + SrcData.value_32_1);
+                        DstData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + SrcData.value_32_2);
+
+                        // Need to cast to void* for extended ASM code.
+                        write_mem_wtfwd((void *) dst, DstData.value_64);
+                    }
+
+                    overlap_dst = m_pfOverlap[niEar];
+
+                    // Last, we copy our output (with scaling), sum it with the
+                    // previous output, directly to the overlap buffer only.
+                    // This data will be used in the first loop for the next audio block.
+                    for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
+                    {
+                        // Need to cast to void* for extended ASM code.
+                        SrcData.value_64 = read_mem_reqodata((void *) src);
+                        DstData.value_64 = read_mem_reqv((void *) dst);
+
+                        OverlapData.value_32_1 = m_fFFTScaler * (DstData.value_32_1 + SrcData.value_32_1);
+                        OverlapData.value_32_2 = m_fFFTScaler * (DstData.value_32_2 + SrcData.value_32_2);
+
+                        // Need to cast to void* for extended ASM code.
+                        write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
+                    }
+                } else if (niChannel == 0) {
+                    src = m_pfScratchBufferB;
+                    dst = ppfDst[niEar];
+
+                    // Here, we simply copy the output, sum it with the previous outputs.
+                    for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
+                    {
+                        // Need to cast to void* for extended ASM code.
+                        SrcData.value_64 = read_mem_reqodata((void *) src);
+                        write_mem_wtfwd((void *) dst, SrcData.value_64);
+                    }
+                } else {
+                    src = m_pfScratchBufferB;
+                    dst = ppfDst[niEar];
+
+                    // Here, we simply copy the output, sum it with the previous outputs.
+                    for (unsigned niSample = 0; niSample < ReadLength + OverlapLength; niSample+=2, src+=2, dst+=2)
+                    {
+                        // Need to cast to void* for extended ASM code.
+                        SrcData.value_64 = read_mem_reqodata((void *) src);
+                        DstData.value_64 = read_mem_reqv((void *) dst);
+
+                        DstData.value_32_1 = DstData.value_32_1 + SrcData.value_32_1;
+                        DstData.value_32_2 = DstData.value_32_2 + SrcData.value_32_2;
+
+                        // Need to cast to void* for extended ASM code.
+                        write_mem_wtfwd((void *) dst, DstData.value_64);
+                    }
+                }
+                EndCounter(4);
+
+                TotalTime[1] -= FFTPostProcTime;
+                TotalTime[2] += FFTPostProcTime + IFFTPreProcTime;
+                TotalTime[3] -= IFFTPreProcTime;
             }
-            for(ni = 0; ni < m_nFFTSize; ni++)
-                m_pfScratchBufferA[ni] *= m_fFFTScaler;
-            memcpy(ppfDst[niEar], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
-            for(ni = 0; ni < m_nOverlapLength; ni++)
-                ppfDst[niEar][ni] += m_pfOverlap[niEar][ni];
-            memcpy(m_pfOverlap[niEar], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
         }
     }
 }
 
 void AmbisonicBinauralizer::PrintTimeInfo(unsigned factor) {
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        printf("Binaur Chain Total\t = %llu\n", TotalTime[0]/factor);
-    } else {
-        printf("Binaur FFT\t = %llu\n", TotalTime[0]/factor);
-        printf("Binaur FIR\t = %llu\n", TotalTime[1]/factor);
-        printf("Binaur IFFT\t = %llu\n", TotalTime[2]/factor);
-    }
+    printf("\n");
+    printf("---------------------------------------------\n");
+    printf("BINAURALIZER TIME\n");
+    printf("---------------------------------------------\n");
+    printf("Total Time\t\t = %llu\n", (TotalTime[0] + TotalTime[1] + TotalTime[2] + TotalTime[3] + TotalTime[4])/factor);
 
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor, false);
+    if (!(DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD)) {
+        printf("\n");
+        printf("Binaur Init Data\t = %llu\n", TotalTime[0]/factor);
+        printf("Binaur FFT\t\t = %llu\n", TotalTime[1]/factor);
+        printf("Binaur FIR\t\t = %llu\n", TotalTime[2]/factor);
+        printf("Binaur IFFT\t\t = %llu\n", TotalTime[3]/factor);
+        printf("Binaur Overlap\t\t = %llu\n", TotalTime[4]/factor);
     }
 }

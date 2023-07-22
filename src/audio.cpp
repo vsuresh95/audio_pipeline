@@ -6,6 +6,8 @@
 #include <resultSample.hpp>
 #endif // USE_REAL_DATA
 
+FFIChain* FFIChainInstHandle;
+
 void ABAudio::Configure() {
     Name = (char *) "AUDIO";
 
@@ -34,10 +36,9 @@ void ABAudio::Configure() {
     // Hardware acceleration
     // 1. Regular invocation chain
     // 2. Shared memory invocation chain - non-pipelined or pipelined
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
-        FFIChainInst.ConfigureAcc();
 
         // Assign size parameters that is used for data store and load loops
         FFIChainInst.m_nChannelCount = rotator.m_nChannelCount;
@@ -45,6 +46,8 @@ void ABAudio::Configure() {
         FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
+
+        FFIChainInst.ConfigureAcc();
 
     	// Write input data for psycho twiddle factors
     	FFIChainInst.InitTwiddles(&sumBF, rotator.m_pFFT_psych_cfg->super_twiddles);
@@ -64,6 +67,8 @@ void ABAudio::Configure() {
         // Assign the configured accelerator object to both rotator and decoder.
         rotator.FFIChainInst = FFIChainInst;
         decoder.FFIChainInst = FFIChainInst;
+
+        FFIChainInstHandle = &FFIChainInst;
     }
 
 }
@@ -136,13 +141,23 @@ void ABAudio::processBlock() {
 
 void ABAudio::PrintTimeInfo(unsigned factor) {
     printf("---------------------------------------------\n");
-    printf("RESULTS\n");
+    printf("TOP LEVEL TIME\n");
     printf("---------------------------------------------\n");
-    printf("Psycho Filter\t = %lu\n", TotalTime[0]/factor);
-    printf("Zoomer Process\t = %lu\n", TotalTime[1]/factor);
-    printf("Binaur Filter\t = %lu\n", TotalTime[2]/factor);
+    printf("Psycho Filter\t\t = %llu\n", TotalTime[0]/factor);
+    printf("Zoomer Process\t\t = %llu\n", TotalTime[1]/factor);
+    printf("Binaur Filter\t\t = %llu\n", TotalTime[2]/factor);
 
     // Call lower-level print functions.
     rotator.PrintTimeInfo(factor);
+
+    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        rotator.FFIChainInst.PrintTimeInfo(factor, true);
+    }
+
     decoder.PrintTimeInfo(factor);
+
+    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        decoder.FFIChainInst.PrintTimeInfo(factor, false);
+    }
+    printf("---------------------------------------------\n");
 }
