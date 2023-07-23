@@ -539,13 +539,13 @@ void FFIChain::EndCounter(unsigned Index) {
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
     if (DO_FFT_IFFT_OFFLOAD) {
 		if (isPsycho) {
-			printf("Psycho Init Data\t\t = %llu\n", TotalTime[0]/factor);
+			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 			printf("Psycho FFT\t\t = %llu\n", TotalTime[1]/factor);
 			printf("Psycho FIR\t\t = %llu\n", TotalTime[2]/factor);
 			printf("Psycho IFFT\t\t = %llu\n", TotalTime[3]/factor);
 			printf("Psycho Overlap\t\t = %llu\n", TotalTime[4]/factor);
 		} else {
-			printf("Binaur Init Data\t\t = %llu\n", TotalTime[5]/factor);
+			printf("Binaur Init Data\t = %llu\n", TotalTime[5]/factor);
 			printf("Binaur FFT\t\t = %llu\n", TotalTime[6]/factor);
 			printf("Binaur FIR\t\t = %llu\n", TotalTime[7]/factor);
 			printf("Binaur IFFT\t\t = %llu\n", TotalTime[8]/factor);
@@ -553,26 +553,26 @@ void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
 		}
 	} else if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		if (isPsycho) {
-			printf("Psycho Init Data\t\t = %llu\n", TotalTime[0]/factor);
-			printf("Psycho Init Filters\t\t = %llu\n", TotalTime[1]/factor);
-			printf("Psycho Acc execution\t\t = %llu\n", TotalTime[2]/factor);
+			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+			printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
+			printf("Psycho Acc execution\t = %llu\n", TotalTime[2]/factor);
 			printf("Psycho Overlap\t\t = %llu\n", TotalTime[3]/factor);
 		} else {
-			printf("Binaur Init Data\t\t = %llu\n", TotalTime[4]/factor);
-			printf("Binaur Init Filters\t\t = %llu\n", TotalTime[5]/factor);
-			printf("Binaur Acc execution\t\t = %llu\n", TotalTime[6]/factor);
+			printf("Binaur Init Data\t = %llu\n", TotalTime[4]/factor);
+			printf("Binaur Init Filters\t = %llu\n", TotalTime[5]/factor);
+			printf("Binaur Acc execution\t = %llu\n", TotalTime[6]/factor);
 			printf("Binaur Overlap\t\t = %llu\n", TotalTime[7]/factor);
 		}
 	} else if (DO_PP_CHAIN_OFFLOAD) {
 		if (isPsycho) {
-			printf("Psycho Init Data\t\t = %llu\n", TotalTime[0]/factor);
-			printf("Psycho Init Filters\t\t = %llu\n", TotalTime[1]/factor);
-			printf("Psycho Acc execution\t\t = 0\n");
+			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+			printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
+			printf("Psycho Acc execution\t = 0\n");
 			printf("Psycho Overlap\t\t = %llu\n", TotalTime[2]/factor);
 		} else {
-			printf("Binaur Init Data\t\t = %llu\n", TotalTime[3]/factor);
-			printf("Binaur Init Filters\t\t = %llu\n", TotalTime[4]/factor);
-			printf("Binaur Acc execution\t\t = 0\n");
+			printf("Binaur Init Data\t = %llu\n", TotalTime[3]/factor);
+			printf("Binaur Init Filters\t = %llu\n", TotalTime[4]/factor);
+			printf("Binaur Acc execution\t = 0\n");
 			printf("Binaur Overlap\t\t = %llu\n", TotalTime[5]/factor);
 		}
 	}
