@@ -35,6 +35,9 @@ void FFIChain::InitParams() {
 	// Therefore, NUM_DEVICES+7 = 10.
     mem_size = acc_size * (NUM_DEVICES+7);
 
+	// Extra space to store rotate order accelerator data
+    mem_size += acc_size * m_nChannelCount;
+
 	// Helper flags for sync flags that the CPU needs to access.
 	// We add a pair of sync flags for FIR filter weights, so that
 	// this write can be overlapped with FFT operations.

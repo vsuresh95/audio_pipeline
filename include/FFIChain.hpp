@@ -7,6 +7,7 @@
 #include <FFTAcc.hpp>
 #include <FIRAcc.hpp>
 #include <FFIAcc.hpp>
+#include <RotateAcc.hpp>
 
 #include <kiss_fftr.hpp>
 #include <BFormat.hpp>
@@ -25,6 +26,7 @@
 #else
 #include <fixed_point.h>
 #define AUDIO_FX_IL 14
+#define ROTATE_FX_IL 16
 #define FLOAT_TO_FIXED_WRAP(x, y) float_to_fixed32(x, y)
 #define FIXED_TO_FLOAT_WRAP(x, y) fixed32_to_float(x, y)
 #endif
@@ -61,6 +63,9 @@ public:
 
     // Instance of Monolithic FFI accelerator.
     FFIAcc FFIInst;
+
+    // Instance of Rotate Order accelerator.
+    RotateAcc RotateInst;
 
     // Buffer pointers.
     device_t *mem;
@@ -185,6 +190,9 @@ public:
     void UpdateSync(unsigned FlagOFfset, int64_t value);
     void SpinSync(unsigned FlagOFfset, int64_t value);
     bool TestSync(unsigned FlagOFfset, int64_t value);
+
+    // Accelerate rotate order.
+    void OffloadRotateOrder(CBFormat* pBFSrcDst);
 };
 
 #endif // FFICHAIN_H
