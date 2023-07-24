@@ -81,6 +81,8 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
         FFIChainInst.m_nBlockSize = rotator.m_nBlockSize;
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
+        
+        FFIChainInst.ConfigureAcc();
 
         FFIChainInst.ConfigureAcc();
 
@@ -166,6 +168,16 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
 
     if (processType == ILLIXR_AUDIO::ABAudio::ProcessType::FULL) {
         writeFile(resultSample);
+    } 
+    
+    for(unsigned niEar = 0; niEar < 2; niEar++) {
+        std::cout << "  {" << std::endl << "    ";
+        // std::cout << "resultSample[" << niEar << "]:" << std::endl;
+        for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
+            std::cout << resultSample[niEar][niSample] << ", ";
+            if ((niSample + 1) % 8 == 0) std::cout << std::endl << "    ";
+        }
+        std::cout << std::endl << "  }," << std::endl;
     }
 
     // for(unsigned niEar = 0; niEar < 2; niEar++) {
@@ -229,6 +241,28 @@ void ILLIXR_AUDIO::ABAudio::updateRotation() {
     Orientation head(0,0,1.0*frame/1500*3.14*2);
     rotator.SetOrientation(head);
     rotator.Refresh();
+    if (DO_ROTATE_OFFLOAD) {
+        FFIChainInstHandle->RotateParams.m_fCosAlpha = rotator.m_fCosAlpha;
+        FFIChainInstHandle->RotateParams.m_fSinAlpha = rotator.m_fSinAlpha;
+        FFIChainInstHandle->RotateParams.m_fCosBeta = rotator.m_fCosBeta;
+        FFIChainInstHandle->RotateParams.m_fSinBeta = rotator.m_fSinBeta;
+        FFIChainInstHandle->RotateParams.m_fCosGamma = rotator.m_fCosGamma;
+        FFIChainInstHandle->RotateParams.m_fSinGamma = rotator.m_fSinGamma;
+        FFIChainInstHandle->RotateParams.m_fCos2Alpha = rotator.m_fCos2Alpha;
+        FFIChainInstHandle->RotateParams.m_fSin2Alpha = rotator.m_fSin2Alpha;
+        FFIChainInstHandle->RotateParams.m_fCos2Beta = rotator.m_fCos2Beta;
+        FFIChainInstHandle->RotateParams.m_fSin2Beta = rotator.m_fSin2Beta;
+        FFIChainInstHandle->RotateParams.m_fCos2Gamma = rotator.m_fCos2Gamma;
+        FFIChainInstHandle->RotateParams.m_fSin2Gamma = rotator.m_fSin2Gamma;
+        FFIChainInstHandle->RotateParams.m_fCos3Alpha = rotator.m_fCos3Alpha;
+        FFIChainInstHandle->RotateParams.m_fSin3Alpha = rotator.m_fSin3Alpha;
+        FFIChainInstHandle->RotateParams.m_fCos3Beta = rotator.m_fCos3Beta;
+        FFIChainInstHandle->RotateParams.m_fSin3Beta = rotator.m_fSin3Beta;
+        FFIChainInstHandle->RotateParams.m_fCos3Gamma = rotator.m_fCos3Gamma;
+        FFIChainInstHandle->RotateParams.m_fSin3Gamma = rotator.m_fSin3Gamma;
+
+        FFIChainInstHandle->UpdateRotateParams();
+    }
 }
 
 
@@ -405,4 +439,8 @@ void OffloadBinaurPipeline(CBFormat* pBFSrc, float** ppfDst, kiss_fft_cpx*** m_p
         FFIChainInstHandle->BinaurProcessDMA(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
     else
         FFIChainInstHandle->BinaurProcess(pBFSrc, ppfDst, m_ppcpFilters, m_pfOverlap);
+}
+
+void OffloadRotateOrder(CBFormat* pBFSrcDst) {
+    FFIChainInstHandle->OffloadRotateOrder(pBFSrcDst);
 }
