@@ -128,9 +128,11 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 }
 
 // Dummy functions
-void FFIChain::FFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {}
+void FFIChain::PsychoRegularFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {}
 
-void FFIChain::IFFTRegularProcess(kiss_fft_scalar* timedata, kiss_fft_scalar* freqdata) {}
+void FFIChain::BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {}
+
+void FFIChain::FIR_SW(kiss_fftr_cfg FFTcfg, kiss_fft_cpx* m_Filters, kiss_fftr_cfg IFFTcfg) {}
 
 #endif // USE_MONOLITHIC_ACC
 
