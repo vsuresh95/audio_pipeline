@@ -71,7 +71,7 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
     // Hardware acceleration
     // 1. Regular invocation chain
     // 2. Shared memory invocation chain - non-pipelined or pipelined
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
+    if (DO_ROTATE_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
 
@@ -82,8 +82,6 @@ ILLIXR_AUDIO::ABAudio::ABAudio(std::string outputFilePath, ProcessType procTypeI
         FFIChainInst.m_nFFTSize = rotator.m_nFFTSize;
         FFIChainInst.m_nFFTBins = rotator.m_nFFTBins;
         
-        FFIChainInst.ConfigureAcc();
-
         FFIChainInst.ConfigureAcc();
 
     	// Write input data for psycho twiddle factors
@@ -170,16 +168,6 @@ void ILLIXR_AUDIO::ABAudio::processBlock() {
         writeFile(resultSample);
     } 
     
-    for(unsigned niEar = 0; niEar < 2; niEar++) {
-        std::cout << "  {" << std::endl << "    ";
-        // std::cout << "resultSample[" << niEar << "]:" << std::endl;
-        for(unsigned niSample = 0; niSample < BLOCK_SIZE; niSample++) {
-            std::cout << resultSample[niEar][niSample] << ", ";
-            if ((niSample + 1) % 8 == 0) std::cout << std::endl << "    ";
-        }
-        std::cout << std::endl << "  }," << std::endl;
-    }
-
     // for(unsigned niEar = 0; niEar < 2; niEar++) {
     //     std::cout << "  {" << std::endl << "    ";
     //     // std::cout << "resultSample[" << niEar << "]:" << std::endl;

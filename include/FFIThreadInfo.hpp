@@ -32,8 +32,6 @@ char ifft_dev_name[] = "audio_fft_stratus.1";
 char fir_dev_name[] = "audio_fir_stratus.0";
 char dma_dev_name[] = "audio_dma_stratus.0";
 char ffi_dev_name[] = "audio_ffi_stratus.0";
-char epochs_fft_dev_name[] = "fft2_stratus.0";
-char epochs_ifft_dev_name[] = "fft2_stratus.1";
 
 char epochs_fft_dev_name[] = "fft2_stratus.0";
 char epochs_ifft_dev_name[] = "fft2_stratus.1";
@@ -330,7 +328,7 @@ struct hu_audiodec_rtl_access hu_audiodec_cfg_000[] = {
 		.cfg_regs_9 = CFG_REGS_9,
 		.cfg_regs_21 = CFG_REGS_21,
 		.cfg_regs_4 = 0,
-		.cfg_regs_2 = 8,
+		.cfg_regs_2 = 0,
 		.cfg_regs_3 = 0,
 		.cfg_regs_19 = CFG_REGS_19,
 		.cfg_regs_18 = CFG_REGS_18,

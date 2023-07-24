@@ -62,6 +62,27 @@ typedef int device_t;
 #define CONS_VALID_OFFSET SYNC_VAR_SIZE + 6
 #define CONS_READY_OFFSET SYNC_VAR_SIZE + 7
 
+struct rotate_params_t {
+    float m_fCosAlpha;
+    float m_fSinAlpha;
+    float m_fCosBeta;
+    float m_fSinBeta;
+    float m_fCosGamma;
+    float m_fSinGamma;
+    float m_fCos2Alpha;
+    float m_fSin2Alpha;
+    float m_fCos2Beta;
+    float m_fSin2Beta;
+    float m_fCos2Gamma;
+    float m_fSin2Gamma;
+    float m_fCos3Alpha;
+    float m_fSin3Alpha;
+    float m_fCos3Beta;
+    float m_fSin3Beta;
+    float m_fCos3Gamma;
+    float m_fSin3Gamma;
+};
+
 class FFIChain {
 public:
     // Buffer pointers.
