@@ -41,17 +41,13 @@ int main(int argc, char **argv) {
 }
 
 void PrintHeader() {
-    printf("---------------------------------------------\n");
-    printf("3D AUDIO DECODER\n");
-    printf("---------------------------------------------\n");
-    printf("NUM_BLOCKS = %d\n", NUM_BLOCKS);
-    printf("BLOCK_SIZE = %d\n", BLOCK_SIZE);
-    printf("COH PROTOCOL = %s\n", CohPrintHeader);
-    printf("CONFIG = %s\n", USE_MONOLITHIC_ACC ? "Monolithic Accelerator" :
-                            "Composable Accelerator");
-    printf("OFFLOADING = %s\n", (DO_CHAIN_OFFLOAD ? "Regular Invocation" :
-                                (DO_NP_CHAIN_OFFLOAD ? "Shared Memory Invocation" :
-                                (DO_PP_CHAIN_OFFLOAD ? "Shared Memory Invocation - Pipelined" :
-                                "No Offloading"))));
-    printf("\n");
+    printf("--------------------------------------------------------------------------------------\n");
+    printf("3D SPATIAL AUDIO DECODER: ");
+    printf("%s\n", (DO_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator for FFT-FIR-IFFT" :"Composed Fine-Grained Accelerators for FFT-FIR-IFFT") :
+                                (DO_NP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator with ASI" :"Composed Fine-Grained Accelerators with ASI") :
+                                (DO_PP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Hardware Pipelining" : "Software Pipelining" ):
+                                (DO_FFT_IFFT_OFFLOAD) ? "Hardware Acceleration of FFT-IFFT in EPOCHS" :
+                                "All Software in EPOCHS"))));
+
+    printf("--------------------------------------------------------------------------------------\n");
 }

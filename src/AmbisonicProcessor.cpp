@@ -148,6 +148,11 @@ void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
         FFIChainInst.m_nOverlapLength = m_nOverlapLength;
         FFIChainInst.PsychoNonPipelineProcess(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap);
         EndCounter(0);
+    } else if (DO_FFT_IFFT_OFFLOAD) {
+        StartCounter();
+        FFIChainInst.m_nOverlapLength = m_nOverlapLength;
+        FFIChainInst.PsychoRegularFFTIFFT(pBFSrcDst, m_ppcpPsychFilters, m_pfOverlap, m_pFFT_psych_cfg, m_pIFFT_psych_cfg);
+        EndCounter(0);
     } else {
         ShelfFilterOrder(pBFSrcDst, nSamples);
     }
@@ -169,7 +174,7 @@ void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
         ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
     }
 	WriteScratchReg(0);
-    EndCounter(3);
+    EndCounter(5);
 }
 
 void AmbisonicProcessor::ProcessOrder1_3D(CBFormat* pBFSrcDst, unsigned nSamples)
@@ -344,69 +349,137 @@ void AmbisonicProcessor::ShelfFilterOrder(CBFormat* pBFSrcDst, unsigned nSamples
 
     unsigned iChannelOrder = 0;
 
+    // Pointers/structures to manage input/output data
+ 	audio_token_t SrcData;
+ 	audio_t* src;
+ 	audio_token_t DstData;
+ 	audio_t* dst;
+ 	audio_token_t OverlapData;
+ 	audio_t* overlap_dst;
+
+ 	unsigned InitLength = m_nBlockSize;
+ 	unsigned ZeroLength = m_nFFTSize - m_nBlockSize;
+ 	unsigned ReadLength = m_nBlockSize;
+ 	unsigned OverlapLength = round_up(m_nOverlapLength, 2);
+
     // Filter the Ambisonics channels
     // All  channels are filtered using linear phase FIR filters.
     // In the case of the 0th order signal (W channel) this takes the form of a delay
     // For all other channels shelf filters are used
-
-    // Offload the entire task to be pipelined using shared memory.
-    MyMemset(m_pfScratchBufferA, 0, m_nFFTSize * sizeof(audio_t));
-
     for(unsigned niChannel = 0; niChannel < m_nChannelCount; niChannel++)
     {
         iChannelOrder = int(sqrt(niChannel));    //get the order of the current channel
 
-        // Offload to regular invocation accelerators, or shared memory
-        // invocation accelerators, or SW as per compiler flags.
-        memcpy(m_pfScratchBufferA, pBFSrcDst->m_ppfChannels[niChannel], m_nBlockSize * sizeof(audio_t));
-        MyMemset(&m_pfScratchBufferA[m_nBlockSize], 0, (m_nFFTSize - m_nBlockSize) * sizeof(audio_t));
+        src = pBFSrcDst->m_ppfChannels[niChannel];
+        dst = m_pfScratchBufferA;
 
         StartCounter();
-        kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
+        // Copying from pBFSrcDst->m_ppfChannels[niChannel] to m_pfScratchBufferA
+        for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src+=2, dst+=2)
+        {
+            // Need to cast to void* for extended ASM code.
+            SrcData.value_64 = read_mem_reqv((void *) src);
+            write_mem_wtfwd((void *) dst, SrcData.value_64);
+        }
+
+        // Zeroing rest of m_pfScratchBufferA
+        for (unsigned niSample = 0; niSample < ZeroLength; niSample+=2, dst+=2)
+        {
+            // Need to cast to void* for extended ASM code.
+            SrcData.value_64 = 0;
+            write_mem_wtfwd((void *) dst, SrcData.value_64);
+        }
         EndCounter(0);
+
+        // Convert from time domain back to frequency domain
+        StartCounter();
+        unsigned long long FFTPostProcTime = kiss_fftr(m_pFFT_psych_cfg, m_pfScratchBufferA, m_pcpScratch);
+        EndCounter(1);
 
         // Perform the convolution in the frequency domain
         StartCounter();
         for(unsigned ni = 0; ni < m_nFFTBins; ni++)
         {
-            cpTemp.r = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].r
-                        - m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].i;
-            cpTemp.i = m_pcpScratch[ni].r * m_ppcpPsychFilters[iChannelOrder][ni].i
-                        + m_pcpScratch[ni].i * m_ppcpPsychFilters[iChannelOrder][ni].r;
+            C_MUL(cpTemp , m_pcpScratch[ni] , m_ppcpPsychFilters[iChannelOrder][ni]);
             m_pcpScratch[ni] = cpTemp;
         }
-        EndCounter(1);
+        EndCounter(2);
 
         // Convert from frequency domain back to time domain
         StartCounter();
-        kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
-        EndCounter(2);
+        unsigned long long IFFTPreProcTime = kiss_fftri(m_pIFFT_psych_cfg, m_pcpScratch, m_pfScratchBufferA);
+        EndCounter(3);
 
-        for(unsigned ni = 0; ni < m_nFFTSize; ni++)
-            m_pfScratchBufferA[ni] *= m_fFFTScaler;
+        src = m_pfScratchBufferA;
+        dst = pBFSrcDst->m_ppfChannels[niChannel];
+        overlap_dst = m_pfOverlap[niChannel];
 
-        memcpy(pBFSrcDst->m_ppfChannels[niChannel], m_pfScratchBufferA, m_nBlockSize * sizeof(audio_t));
+        StartCounter();
+        // First, we copy the output, scale it and account for the overlap
+        // data from the previous block, for the same channel.
+        for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
+        {
+            // Need to cast to void* for extended ASM code.
+            SrcData.value_64 = read_mem_reqodata((void *) src);
+            OverlapData.value_64 = read_mem_reqv((void *) overlap_dst);
 
-        for(unsigned ni = 0; ni < m_nOverlapLength; ni++) {
-            pBFSrcDst->m_ppfChannels[niChannel][ni] += m_pfOverlap[niChannel][ni];
+            DstData.value_32_1 = OverlapData.value_32_1 + m_fFFTScaler * SrcData.value_32_1;
+            DstData.value_32_2 = OverlapData.value_32_2 + m_fFFTScaler * SrcData.value_32_2;
+
+            // Need to cast to void* for extended ASM code.
+            write_mem_wtfwd((void *) dst, DstData.value_64);
         }
 
-        memcpy(m_pfOverlap[niChannel], &m_pfScratchBufferA[m_nBlockSize], m_nOverlapLength * sizeof(audio_t));
-    }
-    
+        // Second, we simply copy the output (with scaling) as we are outside the overlap range.
+        for (unsigned niSample = OverlapLength; niSample < ReadLength; niSample+=2, src+=2, dst+=2)
+        {
+            // Need to cast to void* for extended ASM code.
+            SrcData.value_64 = read_mem_reqodata((void *) src);
+
+            DstData.value_32_1 = m_fFFTScaler * SrcData.value_32_1;
+            DstData.value_32_2 = m_fFFTScaler * SrcData.value_32_2;
+
+            // Need to cast to void* for extended ASM code.
+            write_mem_wtfwd((void *) dst, DstData.value_64);
+        }
+
+        overlap_dst = m_pfOverlap[niChannel];
+
+        // Last, we copy our output (with scaling) directly to the overlap buffer only.
+        // This data will be used in the first loop for the next audio block.
+        for (unsigned niSample = 0; niSample < OverlapLength; niSample+=2, src+=2, dst+=2, overlap_dst+=2)
+        {
+            // Need to cast to void* for extended ASM code.
+            SrcData.value_64 = read_mem_reqodata((void *) src);
+
+            OverlapData.value_32_1 = m_fFFTScaler * SrcData.value_32_1;
+            OverlapData.value_32_2 = m_fFFTScaler * SrcData.value_32_2;
+
+            // Need to cast to void* for extended ASM code.
+            write_mem_wtfwd((void *) overlap_dst, OverlapData.value_64);
+        }
+        EndCounter(4);
+
+        TotalTime[1] -= FFTPostProcTime;
+        TotalTime[2] += FFTPostProcTime + IFFTPreProcTime;
+        TotalTime[3] -= IFFTPreProcTime;
+    } 
 }
 
 void AmbisonicProcessor::PrintTimeInfo(unsigned factor) {
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        printf("Psycho Chain Total\t = %llu\n", TotalTime[0]/factor);
-    } else {
-        printf("Psycho FFT\t = %llu\n", TotalTime[0]/factor);
-        printf("Psycho FIR\t = %llu\n", TotalTime[1]/factor);
-        printf("Psycho IFFT\t = %llu\n", TotalTime[2]/factor);
-    }
-    printf("Rotate Order\t = %llu\n", TotalTime[3]/factor);
+    printf("Rotate Order\t\t = %llu\n", TotalTime[5]/factor);
+    printf("\n");
+    printf("---------------------------------------------\n");
+    printf("PSYCHO-ACOUSTIC TIME\n");
+    printf("---------------------------------------------\n");
+    printf("Total Time\t\t = %llu\n", (TotalTime[0] + TotalTime[1] + TotalTime[2] + TotalTime[3] + TotalTime[4])/factor);
 
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor, true);
+    if (!(DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD)) {
+        printf("\n");
+        printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+        printf("Psycho FFT\t\t = %llu\n", TotalTime[1]/factor);
+        printf("Psycho FIR\t\t = %llu\n", TotalTime[2]/factor);
+        printf("Psycho IFFT\t\t = %llu\n", TotalTime[3]/factor);
+        printf("Psycho Overlap\t\t = %llu\n", TotalTime[4]/factor);
     }
 }

@@ -47,7 +47,7 @@ kiss_fftr_cfg kiss_fftr_alloc(int nfft, int inverse_fft, void *mem, unsigned *le
     return st;
 }
 
-void kiss_fftr(kiss_fftr_cfg st, const kiss_fft_scalar *timedata, kiss_fft_cpx *freqdata)
+unsigned long long kiss_fftr(kiss_fftr_cfg st,const kiss_fft_scalar *timedata,kiss_fft_cpx *freqdata)
 {
     /* input buffer timedata is stored row-wise */
     int k,ncfft;
@@ -67,7 +67,7 @@ void kiss_fftr(kiss_fftr_cfg st, const kiss_fft_scalar *timedata, kiss_fft_cpx *
      * The difference of tdc.r - tdc.i is the sum of the input (dot product) [1,-1,1,-1... 
      *      yielding Nyquist bin of input time sequence
      */
- 
+    unsigned long long start_time = KissGetCounter();
     tdc.r = st->tmpbuf[0].r;
     tdc.i = st->tmpbuf[0].i;
     C_FIXDIV(tdc,2);
@@ -93,15 +93,19 @@ void kiss_fftr(kiss_fftr_cfg st, const kiss_fft_scalar *timedata, kiss_fft_cpx *
         freqdata[ncfft-k].r = HALF_OF(f1k.r - tw.r);
         freqdata[ncfft-k].i = HALF_OF(tw.i - f1k.i);
     }
+    unsigned long long end_time = KissGetCounter();
+
+    return end_time - start_time;
 }
 
-void kiss_fftri(kiss_fftr_cfg st, const kiss_fft_cpx *freqdata, kiss_fft_scalar *timedata)
+unsigned long long kiss_fftri(kiss_fftr_cfg st,const kiss_fft_cpx *freqdata,kiss_fft_scalar *timedata)
 {
     /* input buffer timedata is stored row-wise */
     int k, ncfft;
 
     ncfft = st->substate->nfft;
 
+    unsigned long long start_time = KissGetCounter();
     st->tmpbuf[0].r = freqdata[0].r + freqdata[ncfft].r;
     st->tmpbuf[0].i = freqdata[0].r - freqdata[ncfft].r;
     C_FIXDIV(st->tmpbuf[0],2);
@@ -121,6 +125,24 @@ void kiss_fftri(kiss_fftr_cfg st, const kiss_fft_cpx *freqdata, kiss_fft_scalar 
         C_SUB (st->tmpbuf[ncfft - k], fek, fok);
         st->tmpbuf[ncfft - k].i *= -1;
     }
+    unsigned long long end_time = KissGetCounter();
 
     kiss_fft (st->substate, st->tmpbuf, (kiss_fft_cpx *) timedata);
+
+    return end_time - start_time;
+}
+
+unsigned long long KissGetCounter() {
+    unsigned long long cycle;
+
+	asm volatile (
+		"li t0, 0;"
+		"csrr t0, mcycle;"
+		"mv %0, t0"
+		: "=r" (cycle)
+		:
+		: "t0"
+	);
+
+    return cycle;
 }

@@ -67,6 +67,10 @@ public:
     unsigned **ptable;
     volatile device_t* sm_sync;
 
+    // Extra buffer for FIR in SW
+    kiss_fft_cpx* freqdata;
+
+
     // Accelerator parameters.
     unsigned logn_samples;
     unsigned num_samples;
@@ -171,6 +175,11 @@ public:
 
     // Handle pipelined operation of binauralizer filter, with DMA.
     void BinaurProcessDMA(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap);
+
+    // Offload only FFT and IFFT to accelerators
+    void PsychoRegularFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg);
+    void BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg);
+    void FIR_SW(kiss_fftr_cfg FFTcfg, kiss_fft_cpx* m_Filters, kiss_fftr_cfg IFFTcfg);
 
     // Generic APIs for interfacing with ASI sync flags
     void UpdateSync(unsigned FlagOFfset, int64_t value);

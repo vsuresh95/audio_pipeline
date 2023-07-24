@@ -26,6 +26,8 @@ void FFIChain::ConfigureAcc() {
 	ptable = (unsigned **) aligned_malloc(NCHUNK(mem_size) * sizeof(unsigned *));
 	for (unsigned i = 0; i < NCHUNK(mem_size); i++)
 		ptable[i] = (unsigned *) &mem[i * (CHUNK_SIZE / sizeof(device_t))];
+	
+	freqdata = (kiss_fft_cpx*) aligned_malloc(m_nFFTBins * sizeof(kiss_fft_cpx));
 
 	// Assign SpandexConfig and CoherenceMode based on compiler flags.
 	SetSpandexConfig(IS_ESP, COH_MODE);
@@ -35,7 +37,9 @@ void FFIChain::ConfigureAcc() {
 	// The parameters might need to be modified if you have more than 2 FFTs
 	// or 1 FIR in your system, that you want to map differently.
 	FFTInst.ProbeAcc(0);
+#if (DO_FFT_IFFT_OFFLOAD == 0)
 	FIRInst.ProbeAcc(0);
+#endif
 	IFFTInst.ProbeAcc(1);
 
 	// Assign parameters to all accelerator objects.
@@ -47,6 +51,7 @@ void FFIChain::ConfigureAcc() {
     FFTInst.CoherenceMode =  FIRInst.CoherenceMode = IFFTInst.CoherenceMode = CoherenceMode;
 	FFTInst.inverse = 0;
 	IFFTInst.inverse = 1;
+    FFTInst.sync_size = IFFTInst.sync_size = SYNC_VAR_SIZE * sizeof(device_t);
 
 	InitSyncFlags();
 	
@@ -54,7 +59,9 @@ void FFIChain::ConfigureAcc() {
 	// each accelerator object to program accelerator register
 	// with these parameters.
 	FFTInst.ConfigureAcc();
+#if (DO_FFT_IFFT_OFFLOAD == 0)
 	FIRInst.ConfigureAcc();
+#endif
 	IFFTInst.ConfigureAcc();
 
 	// Reset all sync variables to default values.
@@ -102,6 +109,176 @@ void FFIChain::InitSyncFlags() {
 	IFFTInst.input_offset = (2 * acc_len) + SYNC_VAR_SIZE;
 	IFFTInst.output_offset = (3 * acc_len) + SYNC_VAR_SIZE;
 }
+
+
+ void FFIChain::FIR_SW(kiss_fftr_cfg FFTcfg, kiss_fft_cpx* m_Filters, kiss_fftr_cfg IFFTcfg) {
+ 	unsigned InitLength = m_nFFTSize;
+ 	device_token_t SrcData_i;
+ 	audio_token_t DstData_i;
+ 	audio_token_t SrcData_o;
+ 	device_token_t DstData_o;
+
+	kiss_fft_cpx fpnk,fpk,f1k,f2k,tw,tdc;
+	kiss_fft_cpx cpTemp;
+
+ 	// See init_params() for memory layout.
+ 	device_t* src_i = mem + (1 * acc_len) + SYNC_VAR_SIZE;
+ 	device_t* dst_o = mem + (2 * acc_len) + SYNC_VAR_SIZE;
+
+ 	audio_t* dst_i = (audio_t*) src_i;
+ 	audio_t* src_o = (audio_t*) dst_o;
+
+ 	kiss_fft_cpx* dstIn = (kiss_fft_cpx*) dst_i;
+ 	kiss_fft_cpx* srcOut = (kiss_fft_cpx*) src_o;
+
+ 	// Converting FFT output to floating point in-place
+ 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_i+=2, dst_i+=2)
+ 	{
+ 		SrcData_i.value_64 = read_mem_reqv((void *) src_i);
+
+ 		DstData_i.value_32_1 = FIXED_TO_FLOAT_WRAP(SrcData_i.value_32_1, AUDIO_FX_IL);
+ 		DstData_i.value_32_2 = FIXED_TO_FLOAT_WRAP(SrcData_i.value_32_2, AUDIO_FX_IL);
+
+ 		write_mem_wtfwd((void *) dst_i, DstData_i.value_64);
+ 	}
+
+ 	// Post-processing
+ 	tdc.r = dstIn[0].r;
+	tdc.i = dstIn[0].i;
+	C_FIXDIV(tdc,2);
+	CHECK_OVERFLOW_OP(tdc.r ,+, tdc.i);
+	CHECK_OVERFLOW_OP(tdc.r ,-, tdc.i);
+	freqdata[0].r = tdc.r + tdc.i;
+	freqdata[m_nBlockSize].r = tdc.r - tdc.i;
+	freqdata[m_nBlockSize].i = freqdata[0].i = 0;
+
+	for (unsigned k = 1; k <= m_nBlockSize/2 ; ++k) {
+		fpk    = dstIn[k]; 
+		fpnk.r =   dstIn[m_nBlockSize-k].r;
+		fpnk.i = - dstIn[m_nBlockSize-k].i;
+		C_FIXDIV(fpk,2);
+		C_FIXDIV(fpnk,2);
+
+		C_ADD( f1k, fpk , fpnk );
+		C_SUB( f2k, fpk , fpnk );
+		C_MUL( tw , f2k , FFTcfg->super_twiddles[k-1]);
+
+		freqdata[k].r = HALF_OF(f1k.r + tw.r);
+		freqdata[k].i = HALF_OF(f1k.i + tw.i);
+		freqdata[m_nBlockSize-k].r = HALF_OF(f1k.r - tw.r);
+		freqdata[m_nBlockSize-k].i = HALF_OF(tw.i - f1k.i);
+	}
+
+ 	// FIR
+ 	for(unsigned k = 0; k < m_nFFTBins; k++){
+ 		C_MUL(cpTemp , freqdata[k] , m_Filters[k]);
+ 		freqdata[k] = cpTemp;
+ 	}
+
+ 	// Pre-processing
+ 	srcOut[0].r = freqdata[0].r + freqdata[m_nBlockSize].r;
+	srcOut[0].i = freqdata[0].r - freqdata[m_nBlockSize].r;
+	C_FIXDIV(srcOut[0],2);
+
+	for (unsigned k = 1; k <= m_nBlockSize / 2; ++k) {
+		kiss_fft_cpx fk, fnkc, fek, fok, tmp;
+		fk = freqdata[k];
+		fnkc.r = freqdata[m_nBlockSize - k].r;
+		fnkc.i = -freqdata[m_nBlockSize - k].i;
+		C_FIXDIV( fk , 2 );
+		C_FIXDIV( fnkc , 2 );
+
+		C_ADD (fek, fk, fnkc);
+		C_SUB (tmp, fk, fnkc);
+		C_MUL (fok, tmp, IFFTcfg->super_twiddles[k-1]);
+		C_ADD (srcOut[k],     fek, fok);
+		C_SUB (srcOut[m_nBlockSize - k], fek, fok);
+		srcOut[m_nBlockSize - k].i *= -1;
+	}	
+
+ 	// Converting IFFT input to floating point in-place
+ 	for (unsigned niSample = 0; niSample < InitLength; niSample+=2, src_o+=2, dst_o+=2)
+ 	{
+		// Need to cast to void* for extended ASM code.
+		SrcData_o.value_64 = read_mem_reqv((void *) src_o);
+
+		DstData_o.value_32_1 = FLOAT_TO_FIXED_WRAP(SrcData_o.value_32_1, AUDIO_FX_IL);
+		DstData_o.value_32_2 = FLOAT_TO_FIXED_WRAP(SrcData_o.value_32_2, AUDIO_FX_IL);
+
+		// Need to cast to void* for extended ASM code.
+		write_mem_wtfwd((void *) dst_o, DstData_o.value_64);
+ 	}
+ }
+
+ void FFIChain::PsychoRegularFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+ 	unsigned ChannelsLeft = m_nChannelCount;
+
+ 	while (ChannelsLeft != 0) {
+		StartCounter();
+		// Write input data for FFT.
+		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+		EndCounter(0);
+
+		unsigned iChannelOrder = int(sqrt(m_nChannelCount - ChannelsLeft));
+
+		StartCounter();
+		FFTInst.StartAcc();
+		FFTInst.TerminateAcc();
+		EndCounter(1);
+
+		// The FIR computation is in software.
+		StartCounter();
+		FIR_SW(FFTcfg, m_Filters[iChannelOrder], IFFTcfg);
+		EndCounter(2);
+
+		StartCounter();
+		IFFTInst.StartAcc();
+		IFFTInst.TerminateAcc();
+		EndCounter(3);
+
+		// Read back output from IFFT
+		StartCounter();
+		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
+		EndCounter(4);
+
+		ChannelsLeft--;
+ 	}
+ }
+
+ void FFIChain::BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx*** m_Filters, audio_t** m_pfOverlap, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {
+     for(unsigned niEar = 0; niEar < 2; niEar++) {
+ 		unsigned ChannelsLeft = m_nChannelCount;
+
+ 		while (ChannelsLeft != 0) {
+			StartCounter();
+			// Write input data for FFT.
+			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
+			EndCounter(5);
+
+			StartCounter();
+			FFTInst.StartAcc();
+			FFTInst.TerminateAcc();
+			EndCounter(6);
+			
+			// The FIR computation is in software.
+			StartCounter();
+			FIR_SW(FFTcfg, m_Filters[niEar][m_nChannelCount - ChannelsLeft], IFFTcfg);
+			EndCounter(7);
+
+			StartCounter();
+			IFFTInst.StartAcc();
+			IFFTInst.TerminateAcc();
+			EndCounter(8);
+
+			// Read back output from IFFT
+			StartCounter();
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			EndCounter(9);
+
+			ChannelsLeft--;
+ 		}
+ 	}
+ }
 
 void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
@@ -418,29 +595,43 @@ void FFIChain::BinaurProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_fft_cpx
 }
 
 void FFIChain::PrintTimeInfo(unsigned factor, bool isPsycho) {
-    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
+    if (DO_FFT_IFFT_OFFLOAD) {
+		if (isPsycho) {
+			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
+			printf("Psycho FFT\t\t = %llu\n", TotalTime[1]/factor);
+			printf("Psycho FIR\t\t = %llu\n", TotalTime[2]/factor);
+			printf("Psycho IFFT\t\t = %llu\n", TotalTime[3]/factor);
+			printf("Psycho Overlap\t\t = %llu\n", TotalTime[4]/factor);
+		} else {
+			printf("Binaur Init Data\t = %llu\n", TotalTime[5]/factor);
+			printf("Binaur FFT\t\t = %llu\n", TotalTime[6]/factor);
+			printf("Binaur FIR\t\t = %llu\n", TotalTime[7]/factor);
+			printf("Binaur IFFT\t\t = %llu\n", TotalTime[8]/factor);
+			printf("Binaur Overlap\t\t = %llu\n", TotalTime[9]/factor);
+		}
+	} else if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD) {
 		if (isPsycho) {
 			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 			printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
 			printf("Psycho Acc execution\t = %llu\n", TotalTime[2]/factor);
-			printf("Psycho Output Read\t = %llu\n", TotalTime[3]/factor);
+			printf("Psycho Overlap\t\t = %llu\n", TotalTime[3]/factor);
 		} else {
 			printf("Binaur Init Data\t = %llu\n", TotalTime[4]/factor);
 			printf("Binaur Init Filters\t = %llu\n", TotalTime[5]/factor);
 			printf("Binaur Acc execution\t = %llu\n", TotalTime[6]/factor);
-			printf("Binaur Output Read\t = %llu\n", TotalTime[7]/factor);
+			printf("Binaur Overlap\t\t = %llu\n", TotalTime[7]/factor);
 		}
 	} else if (DO_PP_CHAIN_OFFLOAD) {
 		if (isPsycho) {
 			printf("Psycho Init Data\t = %llu\n", TotalTime[0]/factor);
 			printf("Psycho Init Filters\t = %llu\n", TotalTime[1]/factor);
 			printf("Psycho Acc execution\t = 0\n");
-			printf("Psycho Output Read\t = %llu\n", TotalTime[2]/factor);
+			printf("Psycho Overlap\t\t = %llu\n", TotalTime[2]/factor);
 		} else {
 			printf("Binaur Init Data\t = %llu\n", TotalTime[3]/factor);
 			printf("Binaur Init Filters\t = %llu\n", TotalTime[4]/factor);
 			printf("Binaur Acc execution\t = 0\n");
-			printf("Binaur Output Read\t = %llu\n", TotalTime[5]/factor);
+			printf("Binaur Overlap\t\t = %llu\n", TotalTime[5]/factor);
 		}
 	}
 }
