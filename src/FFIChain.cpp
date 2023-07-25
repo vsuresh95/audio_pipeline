@@ -556,7 +556,9 @@ void FFIChain::OffloadRotateOrder(CBFormat* pBFSrcDst) {
 	{
 		for(unsigned niChannel = 0; niChannel < InitChannel; niChannel++, dst_i++)
 		{
-			*dst_i = FLOAT_TO_FIXED_WRAP(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
+			if (niChannel != 0) {
+				*dst_i = FLOAT_TO_FIXED_WRAP(pBFSrcDst->m_ppfChannels[niChannel][niSample], ROTATE_FX_IL);
+			}
 		}
 	}
 	EndCounter(0);
@@ -576,7 +578,9 @@ void FFIChain::OffloadRotateOrder(CBFormat* pBFSrcDst) {
 	{
 		for(unsigned niChannel = 0; niChannel < InitChannel; niChannel++, src_o++)
 		{
-			pBFSrcDst->m_ppfChannels[niChannel][niSample] = FIXED_TO_FLOAT_WRAP(*src_o, ROTATE_FX_IL);
+			if (niChannel != 0) {
+				pBFSrcDst->m_ppfChannels[niChannel][niSample] = FIXED_TO_FLOAT_WRAP(*src_o, ROTATE_FX_IL);
+			}
 		}
 	}
 	EndCounter(2);
