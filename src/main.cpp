@@ -36,10 +36,10 @@ int main(int argc, char const *argv[])
     audio.num_blocks_left = numBlocks;
 
     for (int i = 0; i < numBlocks; ++i) {
-        std::cout << "{" << std::endl;
+        // std::cout << "{" << std::endl;
         audio.processBlock();
-        // printf("Block %d done\n", i);
-        std::cout << "}," << std::endl;
+        printf("Block %d done\n", i);
+        // std::cout << "}," << std::endl;
     }
 
     // Print out profile results.
