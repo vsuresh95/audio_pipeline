@@ -36,7 +36,7 @@ void ABAudio::Configure() {
     // Hardware acceleration
     // 1. Regular invocation chain
     // 2. Shared memory invocation chain - non-pipelined or pipelined
-    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
+    if (DO_ROTATE_OFFLOAD || DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD || DO_FFT_IFFT_OFFLOAD) {
         // Configure accelerator parameters and write them to accelerator registers.
         FFIChainInst.logn_samples = (unsigned) log2(BLOCK_SIZE);
 

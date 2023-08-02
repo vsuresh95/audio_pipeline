@@ -47,6 +47,7 @@ void PrintHeader() {
                                 (DO_NP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Monolithic Accelerator with ASI" :"Composed Fine-Grained Accelerators with ASI") :
                                 (DO_PP_CHAIN_OFFLOAD ? ((USE_MONOLITHIC_ACC)? "Hardware Pipelining" : "Software Pipelining" ):
                                 (DO_FFT_IFFT_OFFLOAD) ? "Hardware Acceleration of FFT-IFFT in EPOCHS" :
+                                (DO_ROTATE_OFFLOAD) ? "Hardware Acceleration of Rotate Order in EPOCHS" :
                                 "All Software in EPOCHS"))));
 
     printf("--------------------------------------------------------------------------------------\n");

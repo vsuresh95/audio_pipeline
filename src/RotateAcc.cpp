@@ -33,9 +33,9 @@ void RotateAcc::ConfigureAcc() {
 
 	// Use the following if input and output data are not allocated at the default offsets
 	iowrite32(RotateDev, SRC_OFFSET_REG, 10 * acc_size);
-	iowrite32(RotateDev, DST_OFFSET_REG, 10 * acc_size + (m_nChannelCount / 2 * acc_size));
+	iowrite32(RotateDev, DST_OFFSET_REG, (10 * acc_size) + (m_nChannelCount * BLOCK_SIZE * sizeof(device_t)));
 
-	cfg_block_size = 8;
+	cfg_block_size = BLOCK_SIZE;
 	cfg_input_base = 0;
 	cfg_output_base = 0;
 
@@ -44,7 +44,9 @@ void RotateAcc::ConfigureAcc() {
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_2_REG, cfg_block_size);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_3_REG, cfg_input_base);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_4_REG, cfg_output_base);
+}
 
+void RotateAcc::StartAcc() {
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_8_REG, m_fCosAlpha);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_9_REG, m_fSinAlpha);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_10_REG, m_fCosBeta);
@@ -63,9 +65,7 @@ void RotateAcc::ConfigureAcc() {
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_23_REG, m_fSin3Beta);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_24_REG, m_fCos3Gamma);
 	iowrite32(RotateDev, HU_AUDIODEC_CFG_REGS_25_REG, m_fSin3Gamma);
-}
 
-void RotateAcc::StartAcc() {
 	// Start accelerators
 	iowrite32(RotateDev, CMD_REG, CMD_MASK_START);
 }

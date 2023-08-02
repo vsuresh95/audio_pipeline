@@ -199,17 +199,6 @@ void AmbisonicProcessor::Process(CBFormat *pBFSrcDst, unsigned nSamples) {
         }
         WriteScratchReg(0);
     }
-	WriteScratchReg(0);
-	WriteScratchReg(0x20);
-    if(m_nOrder >= 2) {
-        ProcessOrder2_3D_Optimized(pBFSrcDst, nSamples);
-    }
-	WriteScratchReg(0);
-	WriteScratchReg(0x40);
-    if(m_nOrder >= 3) {
-        ProcessOrder3_3D_Optimized(pBFSrcDst, nSamples);
-    }
-	WriteScratchReg(0);
     EndCounter(5);
 }
 
