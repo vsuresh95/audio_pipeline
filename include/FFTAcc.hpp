@@ -23,7 +23,7 @@
 #define AUDIO_FFT_OUTPUT_OFFSET 0x60
 
 #if (EPOCHS_TARGET == 0)
-#define SLD_AUDIO_FFT 0x055
+#define SLD_AUDIO_FFT 0x063
 #define FFT_DEV_NAME "sld,audio_fft_stratus"
 #else
 #define SLD_AUDIO_FFT 0x057

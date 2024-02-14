@@ -18,7 +18,7 @@
 #define AUDIO_FIR_TWD_INPUT_OFFSET 0x6C
 #define AUDIO_FIR_OUTPUT_OFFSET 0x70
 
-#define SLD_AUDIO_FIR 0x056
+#define SLD_AUDIO_FIR 0x064
 #define FIR_DEV_NAME "sld,audio_fir_stratus"
 
 class FIRAcc {
