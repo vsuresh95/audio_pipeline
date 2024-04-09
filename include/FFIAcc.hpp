@@ -18,7 +18,7 @@
 #define AUDIO_FFI_TWD_INPUT_OFFSET 0x6C
 #define AUDIO_FFI_OUTPUT_OFFSET 0x70
 
-#define SLD_AUDIO_FFI 0x057
+#define SLD_AUDIO_FFI 0x065
 #define FFI_DEV_NAME "sld,audio_ffi_stratus"
 
 class FFIAcc {

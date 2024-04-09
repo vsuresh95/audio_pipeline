@@ -6,7 +6,7 @@
 
 #include <AudioBase.hpp>
 
-#define SLD_AUDIO_DMA 0x051
+#define SLD_AUDIO_DMA 0x066
 #define DMA_DEV_NAME "sld,audio_dma_stratus"
 
 #define AUDIO_DMA_START_OFFSET_REG 0x40
