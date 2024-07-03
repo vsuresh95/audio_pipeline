@@ -1,7 +1,7 @@
 *.wav
 *.o
 *.so
-audio
+audio*
 solo.dbg.exe
 solo.opt.*
 solo.dbg

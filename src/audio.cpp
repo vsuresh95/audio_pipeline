@@ -358,33 +358,33 @@ void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
 }
 
 void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
-    // uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
+    uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
     
     // printf("\n--------------------------------------------------------------------------------------\n");
-    // std::cout<<"CYCLES: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<"\n";
+    std::cout<<"TOTAL TIME: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<" cycles\n\n";
 
     // printf("--------------------------------------------------------------------------------------\n");
     
-    printf("---------------------------------------------\n");
-    printf("TOP LEVEL TIME\n");
-    printf("---------------------------------------------\n");
-    printf("Psycho Filter\t\t = %llu\n", TotalTime[0]/factor);
-    printf("Zoomer Process\t\t = %llu\n", TotalTime[1]/factor);
-    printf("Binaur Filter\t\t = %llu\n", TotalTime[2]/factor);
+    // printf("---------------------------------------------\n");
+    // printf("TOP LEVEL TIME\n");
+    // printf("---------------------------------------------\n");
+    // printf("Psycho Filter\t\t = %llu\n", TotalTime[0]/factor);
+    // printf("Zoomer Process\t\t = %llu\n", TotalTime[1]/factor);
+    // printf("Binaur Filter\t\t = %llu\n", TotalTime[2]/factor);
 
-    // Call lower-level print functions.
-    rotator.PrintTimeInfo(factor);
+    // // Call lower-level print functions.
+    // rotator.PrintTimeInfo(factor);
 
-    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor, true);
-    }
+    // if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    //     FFIChainInst.PrintTimeInfo(factor, true);
+    // }
 
-    decoder.PrintTimeInfo(factor);
+    // decoder.PrintTimeInfo(factor);
 
-    if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
-        FFIChainInst.PrintTimeInfo(factor, false);
-    }
-    printf("---------------------------------------------\n");
+    // if (DO_FFT_IFFT_OFFLOAD || DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+    //     FFIChainInst.PrintTimeInfo(factor, false);
+    // }
+    // printf("---------------------------------------------\n");
 }
 
 void OffloadPsychoFFTIFFT(CBFormat* pBFSrcDst, kiss_fft_cpx** m_ppcpPsychFilters, float** m_pfOverlap, unsigned m_nOverlapLength, kiss_fftr_cfg FFTcfg, kiss_fftr_cfg IFFTcfg) {

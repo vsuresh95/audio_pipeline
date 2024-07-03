@@ -249,8 +249,20 @@ void FFIChain::BinaurRegularFFTIFFT(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filters, audio_t** m_pfOverlap) {
 	unsigned ChannelsLeft = m_nChannelCount;
 
+	// Emulating Regular with ASI: set the end flags so that the accelerators gracefully end in every
+	// iteration. We test the consumer flags (FFT and FIR) before writing the input data. We set the 
+	// valid flags before running esp_run (with start_stop disabled)
 	while (ChannelsLeft != 0) {
+		// Set all END variables to 1.
+		for (unsigned ChainID = 0; ChainID < 3; ChainID++) {
+			UpdateSync(ChainID*acc_len + END_FLAG_OFFSET, 1);
+		}
+
 		StartCounter();
+		// Wait for FFT (consumer) to be ready.
+		SpinSync(ConsRdyFlag, 1);
+		// Reset flag for next iteration.
+		UpdateSync(ConsRdyFlag, 0);
 		// Write input data for FFT.
 		InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
 		EndCounter(0);
@@ -258,21 +270,35 @@ void FFIChain::PsychoRegularProcess(CBFormat* pBFSrcDst, kiss_fft_cpx** m_Filter
 		unsigned iChannelOrder = int(sqrt(m_nChannelCount - ChannelsLeft));
 
 		StartCounter();
+		// Wait for FIR (consumer) to be ready.
+		SpinSync(FltRdyFlag, 1);
+		// Reset flag for next iteration.
+		UpdateSync(FltRdyFlag, 0);
 		// Write input data for FIR filters.
 		InitFilters(pBFSrcDst, m_Filters[iChannelOrder]);
+		// Inform FIR (consumer) of filters ready.
+		UpdateSync(FltVldFlag, 1);
+		// Inform FFT (consumer) to start.
+		UpdateSync(ConsVldFlag, 1);
 		EndCounter(1);
 
-		// Start and check for termination of each accelerator.
 		StartCounter();
 		esp_run(fft_cfg_000, 1);
 		esp_run(fir_cfg_000, 1);
 		esp_run(ifft_cfg_000, 1);
 		EndCounter(2);
 
+		// Wait for IFFT (producer) to send output.
+		SpinSync(ProdVldFlag, 1);
+		// Reset flag for next iteration.
+		UpdateSync(ProdVldFlag, 0);
+
 		// Read back output from IFFT
 		StartCounter();
 		PsychoOverlap(pBFSrcDst, m_pfOverlap, m_nChannelCount - ChannelsLeft);
-		EndCounter(3);	
+		// Inform IFFT (producer) - ready for next iteration.
+		UpdateSync(ProdRdyFlag, 1);
+		EndCounter(3);
 
 		ChannelsLeft--;
 	}
@@ -284,13 +310,25 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 
 		while (ChannelsLeft != 0) {
 			StartCounter();
+			// Wait for FFT (consumer) to be ready.
+			SpinSync(ConsRdyFlag, 1);
+			// Reset flag for next iteration.
+			UpdateSync(ConsRdyFlag, 0);
 			// Write input data for FFT.
 			InitData(pBFSrcDst, m_nChannelCount - ChannelsLeft, true);
 			EndCounter(4);
 
 			StartCounter();
+			// Wait for FIR (consumer) to be ready.
+			SpinSync(FltRdyFlag, 1);
+			// Reset flag for next iteration.
+			UpdateSync(FltRdyFlag, 0);
 			// Write input data for FIR filters.
 			InitFilters(pBFSrcDst, m_Filters[niEar][m_nChannelCount - ChannelsLeft]);
+			// Inform FIR (consumer) of filters ready.
+			UpdateSync(FltVldFlag, 1);
+			// Inform FFT (consumer) to start.
+			UpdateSync(ConsVldFlag, 1);
 			EndCounter(5);
 
 			// Start and check for termination of each accelerator.
@@ -298,12 +336,18 @@ void FFIChain::BinaurRegularProcess(CBFormat* pBFSrcDst, audio_t** ppfDst, kiss_
 			esp_run(fft_cfg_000, 1);
 			esp_run(fir_cfg_000, 1);
 			esp_run(ifft_cfg_000, 1);
-			EndCounter(6);
+			EndCounter(6);			
+
+			// Wait for IFFT (producer) to send output.
+			SpinSync(ProdVldFlag, 1);
+			// Reset flag for next iteration.
+			UpdateSync(ProdVldFlag, 0);
 
 			// Read back output from IFFT
 			StartCounter();
-			// BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
-			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount), m_nChannelCount - ChannelsLeft);
+			BinaurOverlap(pBFSrcDst, ppfDst[niEar], m_pfOverlap[niEar], (ChannelsLeft == 1), (ChannelsLeft == m_nChannelCount));
+			// Inform IFFT (producer) - ready for next iteration.
+			UpdateSync(ProdRdyFlag, 1);
 			EndCounter(7);	
 
 			ChannelsLeft--;
