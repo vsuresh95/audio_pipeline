@@ -358,10 +358,19 @@ void ILLIXR_AUDIO::ABAudio::EndCounter(unsigned Index) {
 }
 
 void ILLIXR_AUDIO::ABAudio::PrintTimeInfo(unsigned factor) {
-    uint64_t total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
+    unsigned long long total_time = (TotalTime[0]+TotalTime[1]+TotalTime[2])/factor;
     
+    if (DO_CHAIN_OFFLOAD || DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) {
+        // Call lower-level print functions.
+        rotator.PrintTimeInfo(factor);
+        printf("Result: %s Zoomer = %llu\n", PACT_MODE, TotalTime[1]/factor);
+        printf("Result: %s Binaur = %llu\n", PACT_MODE, TotalTime[2]/factor);
+    } else {
+        printf("Result: Audio SW = %llu\n", total_time);
+    }
+
     // printf("\n--------------------------------------------------------------------------------------\n");
-    std::cout<<"TOTAL TIME: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<" cycles\n\n";
+    // std::cout<<"TOTAL TIME: "<<(total_time>1000000?(total_time/1000000):((total_time>1000)?(total_time/1000):total_time ))<<(total_time>1000000?"M":((total_time>1000)?"K":"" ))<<" cycles\n\n";
 
     // printf("--------------------------------------------------------------------------------------\n");
     

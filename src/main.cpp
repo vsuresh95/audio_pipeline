@@ -64,11 +64,11 @@ int main(int argc, char const *argv[])
 }
 
 void PrintHeader() {
-    printf("--------------------------------------------------------------------------------------\n");
-    printf("APPLICATION:\t3D Spatial Audio\n");
-    printf("SYSTEM:\t\t%s", (USE_MONOLITHIC_ACC) ? "Monolithic Accelerator" :"Disaggregated Accelerators");
-    printf(" %s\n", (DO_PP_CHAIN_OFFLOAD) ? "Pipelined" : "");
-    printf("INVOCATION:\t%s\n", (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) ? "Accelerator Synchronization Interface (ASI)" : "Linux (ioctl) invocation"); 
-    printf("COHERENCE:\t%s\n", (IS_ESP) ? "MESI Coherence" : "Spandex Coherence"); 
-    printf("--------------------------------------------------------------------------------------\n");
+    // printf("--------------------------------------------------------------------------------------\n");
+    // printf("APPLICATION:\t3D Spatial Audio\n");
+    // printf("SYSTEM:\t\t%s", (USE_MONOLITHIC_ACC) ? "Monolithic Accelerator" :"Disaggregated Accelerators");
+    // printf(" %s\n", (DO_PP_CHAIN_OFFLOAD) ? "Pipelined" : "");
+    // printf("INVOCATION:\t%s\n", (DO_NP_CHAIN_OFFLOAD || DO_PP_CHAIN_OFFLOAD) ? "Accelerator Synchronization Interface (ASI)" : "Linux (ioctl) invocation"); 
+    // printf("COHERENCE:\t%s\n", (IS_ESP) ? "MESI Coherence" : "Spandex Coherence"); 
+    // printf("--------------------------------------------------------------------------------------\n");
 }
