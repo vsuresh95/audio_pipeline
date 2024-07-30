@@ -1,3 +1,21 @@
+# Instructions for PACT 2024 artifact evaluation
+
+Source the environment script for setting the path to RISC-V toolchain. Note that the paths for the toolchain in the script correspond to the default paths in the ESP docker image, and might be different from your installation path.
+```
+source ./esp_env.sh
+```
+
+Set `ESP_ROOT` to the path of your ESP repository. For example,
+```
+export ESP_ROOT=../../../
+```
+
+Source the test generation script to generate the executables for all the tests required in the PACT artifact.
+```
+source ./mozart_generate_all_tests.sh
+```
+The `audio-*.exe` files are generated in the current directory that need to be stored in the `socs/audio-mono-*-xilinx-vcu118-xcvu9p/test` folders before running `make linux`. Pre-compiled reference binaries are included in the ESP repository itself.
+
 # Audio Pipeline
 
 Part of [ILLIXR](https://github.com/ILLIXR/ILLIXR), the Illinios Extended Reality testbed. The audio pipeline is responsible for both recording and playing back spatialized audio for XR.
